@@ -1,22 +1,8 @@
-# Node modules — never push these
 backend/node_modules/
 frontend/node_modules/
-
-# Cache and user data — never push
 backend/compounds_cache.json
 backend/users.json
-
-# Environment
-.env
-.env.local
-
-# Build output
 frontend/dist/
-
-# Logs
 *.log
-npm-debug.log*
-
-# OS files
 .DS_Store
 Thumbs.db
