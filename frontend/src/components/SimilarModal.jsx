@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-
-const API = "http://localhost:5000/api";
+import api from "../api";
 
 export default function SimilarModal({ cid, onClose, onStructure }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`${API}/similar/${cid}`)
+    api.get(`/similar/${cid}`)
       .then(r => setResults(r.data.results))
       .catch(() => setResults([]))
       .finally(() => setLoading(false));
@@ -29,7 +27,12 @@ export default function SimilarModal({ cid, onClose, onStructure }) {
           {results.map(r => (
             <div key={r.cid} style={{display:"flex",gap:"1rem",alignItems:"center",padding:"0.8rem 0",borderBottom:"1px solid var(--border2)"}}>
               <div className="card-img-wrap" style={{width:"80px",height:"80px",minWidth:"80px"}}>
-                <img src={r.image2D} alt={r.name} draggable="false" onContextMenu={e=>e.preventDefault()} />
+                <img
+                  src={r.image2D}
+                  alt={r.name}
+                  draggable="false"
+                  onContextMenu={e => e.preventDefault()}
+                />
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:"0.75rem",color:"var(--accent)",fontWeight:600,marginBottom:"0.2rem"}}>CID {r.cid}</div>

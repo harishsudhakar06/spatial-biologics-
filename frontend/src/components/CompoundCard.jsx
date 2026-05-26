@@ -11,16 +11,13 @@ export default function CompoundCard({ compound, isBest, index, onStructure, onS
 
   const [showMore, setShowMore] = useState(false);
   const [showDownload, setShowDownload] = useState(null);
-  const [displayContent, setDisplayContent] = useState(null); // for inline display
-
-  const getDisplayUrl = (type, format) =>
-    `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/${format}?record_type=${type}&response_type=display`;
+  const [displayContent, setDisplayContent] = useState(null);
 
   const downloadLinks = (type) => [
-    { label: "SDF", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/SDF?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, format: "SDF", type },
-    { label: "JSON", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/JSON?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, format: "JSON", type },
-    { label: "XML", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/XML?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, format: "XML", type },
-    { label: "ASNT", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/ASNT?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, format: "ASNT", type },
+    { label: "SDF", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/SDF?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, display: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/SDF?record_type=${type}&response_type=display` },
+    { label: "JSON", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/JSON?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, display: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/JSON?record_type=${type}&response_type=display` },
+    { label: "XML", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/XML?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, display: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/XML?record_type=${type}&response_type=display` },
+    { label: "ASNT", save: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/ASNT?record_type=${type}&response_type=save&response_basename=Structure_${type}_CID_${cid}`, display: `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${cid}/record/ASNT?record_type=${type}&response_type=display` },
   ];
 
   return (
@@ -29,7 +26,12 @@ export default function CompoundCard({ compound, isBest, index, onStructure, onS
 
       <div className="card-top-row">
         <div className="card-img-wrap" onContextMenu={e => e.preventDefault()}>
-          <img src={image2D} alt={name} draggable="false" onContextMenu={e => e.preventDefault()} />
+          <img
+            src={image2D}
+            alt={name}
+            draggable="false"
+            onContextMenu={e => e.preventDefault()}
+          />
         </div>
 
         <div className="card-top-info">
@@ -75,7 +77,6 @@ export default function CompoundCard({ compound, isBest, index, onStructure, onS
             </table>
           )}
 
-          {/* action links — all inside app */}
           <div className="card-links">
             <button className="link-btn" onClick={onSummary}>Summary</button>
             <span className="link-sep">|</span>
@@ -95,8 +96,14 @@ export default function CompoundCard({ compound, isBest, index, onStructure, onS
 
           <div className="download-section">
             <span className="struct-label">Download:</span>
-            <button className={`btn-struct ${showDownload==="2d"?"active":""}`} onClick={() => { setShowDownload(showDownload==="2d"?null:"2d"); setDisplayContent(null); }}>2D</button>
-            <button className={`btn-struct ${showDownload==="3d"?"active":""}`} onClick={() => { setShowDownload(showDownload==="3d"?null:"3d"); setDisplayContent(null); }}>3D</button>
+            <button
+              className={`btn-struct ${showDownload==="2d"?"active":""}`}
+              onClick={() => { setShowDownload(showDownload==="2d"?null:"2d"); setDisplayContent(null); }}
+            >2D</button>
+            <button
+              className={`btn-struct ${showDownload==="3d"?"active":""}`}
+              onClick={() => { setShowDownload(showDownload==="3d"?null:"3d"); setDisplayContent(null); }}
+            >3D</button>
           </div>
 
           {showDownload && (
@@ -107,31 +114,28 @@ export default function CompoundCard({ compound, isBest, index, onStructure, onS
                   <a href={dl.save} target="_blank" rel="noreferrer" className="download-btn">⬇ Save</a>
                   <button
                     className="download-btn"
-                    onClick={() => setDisplayContent({ url: getDisplayUrl(dl.type, dl.label), label: dl.label })}
+                    onClick={() => setDisplayContent({ url: dl.display, label: dl.label })}
                   >👁 Display</button>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Inline display viewer */}
           {displayContent && (
             <div className="display-viewer">
               <div className="display-viewer-head">
                 <span>{displayContent.label} Data — CID {cid}</span>
-                <button onClick={() => setDisplayContent(null)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--danger)",fontSize:"1rem"}}>✕</button>
+                <button onClick={() => setDisplayContent(null)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--danger)"}}>✕</button>
               </div>
               <iframe
                 src={displayContent.url}
                 title="Display content"
                 width="100%"
                 height="300px"
-                style={{border:"none",display:"block",background:"#fff"}}
-                sandbox="allow-scripts allow-same-origin"
+                style={{border:"none", display:"block", background:"#fff"}}
               />
             </div>
           )}
-
         </div>
       </div>
     </div>

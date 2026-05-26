@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-
-const API = "http://localhost:5000/api";
+import api from "../api";
 
 export default function StructureModal({ cid, type, name, onClose }) {
   const [data, setData] = useState(null);
@@ -10,7 +8,7 @@ export default function StructureModal({ cid, type, name, onClose }) {
   const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
-    axios.get(`${API}/structure/${cid}/${type}`)
+    api.get(`/structure/${cid}/${type}`)
       .then(r => setData(r.data))
       .catch(e => setError(e.response?.data?.error || "Failed to load"))
       .finally(() => setLoading(false));
@@ -35,12 +33,11 @@ export default function StructureModal({ cid, type, name, onClose }) {
 
           {data && data.type === "2d" && (
             <div>
-              {/* Toolbar */}
               <div className="struct-toolbar">
-                <button className="tool-btn" onClick={() => setZoom(z => Math.min(z + 0.2, 3))}>🔍 Zoom In</button>
-                <button className="tool-btn" onClick={() => setZoom(z => Math.max(z - 0.2, 0.4))}>🔎 Zoom Out</button>
+                <button className="tool-btn" onClick={() => setZoom(z => Math.min(z+0.25, 4))}>🔍 Zoom In</button>
+                <button className="tool-btn" onClick={() => setZoom(z => Math.max(z-0.25, 0.3))}>🔎 Zoom Out</button>
                 <button className="tool-btn" onClick={() => setZoom(1)}>↺ Reset</button>
-                <span className="tool-label">2D Structure — CID {cid}</span>
+                <span className="tool-label">Zoom: {Math.round(zoom*100)}%</span>
               </div>
               <div className="struct-viewer-2d">
                 <div style={{transform:`scale(${zoom})`, transition:"transform 0.2s", transformOrigin:"center center"}}>
@@ -53,14 +50,8 @@ export default function StructureModal({ cid, type, name, onClose }) {
                   />
                 </div>
               </div>
-              {/* Info */}
-              <div className="struct-info-box">
-                <div className="struct-info-row"><span>Compound CID</span><span>{cid}</span></div>
-                <div className="struct-info-row"><span>View Type</span><span>2D Structure (Flat)</span></div>
-                <div className="struct-info-row"><span>Source</span><span>Chemical Database</span></div>
-              </div>
               <div className="struct-student-note">
-                💡 <strong>Student Note:</strong> A 2D structure shows the arrangement of atoms and bonds in a flat diagram. Each line represents a chemical bond, and letters represent atoms (C=Carbon, O=Oxygen, N=Nitrogen, H=Hydrogen).
+                💡 <strong>Student Note:</strong> A 2D structure shows atoms and bonds in a flat diagram. Lines = bonds, letters = atoms (C=Carbon, O=Oxygen, N=Nitrogen, H=Hydrogen).
               </div>
             </div>
           )}
@@ -68,7 +59,7 @@ export default function StructureModal({ cid, type, name, onClose }) {
           {data && data.type === "3d" && (
             <div>
               <div className="struct-toolbar">
-                <span className="tool-label">3D Conformer — CID {cid} | Click & drag to rotate</span>
+                <span className="tool-label">🖱️ Drag to rotate &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Right-click to pan</span>
               </div>
               <div className="modal-embed-wrap">
                 <iframe
@@ -76,17 +67,11 @@ export default function StructureModal({ cid, type, name, onClose }) {
                   title="3D Structure"
                   width="100%"
                   height="420px"
-                  style={{border:"none", borderRadius:"0", display:"block"}}
-                  sandbox="allow-scripts allow-same-origin"
+                  style={{border:"none", display:"block"}}
                 />
               </div>
-              <div className="struct-info-box">
-                <div className="struct-info-row"><span>Compound CID</span><span>{cid}</span></div>
-                <div className="struct-info-row"><span>View Type</span><span>3D Conformer (Ball & Stick)</span></div>
-                <div className="struct-info-row"><span>Controls</span><span>Drag to rotate • Scroll to zoom</span></div>
-              </div>
               <div className="struct-student-note">
-                💡 <strong>Student Note:</strong> A 3D structure shows the actual shape of the molecule in space. Different colors represent different atoms — grey=Carbon, red=Oxygen, blue=Nitrogen, white=Hydrogen. You can rotate and zoom to explore it!
+                💡 <strong>Student Note:</strong> 3D view shows the actual shape of the molecule. Colors: grey=Carbon, red=Oxygen, blue=Nitrogen, white=Hydrogen. Drag to rotate, scroll to zoom!
               </div>
             </div>
           )}
@@ -94,7 +79,7 @@ export default function StructureModal({ cid, type, name, onClose }) {
           {data && data.type === "crystal" && (
             <div>
               <div className="struct-toolbar">
-                <span className="tool-label">Crystal Wireframe — CID {cid} | Click & drag to rotate</span>
+                <span className="tool-label">🖱️ Drag to rotate &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Right-click to pan</span>
               </div>
               <div className="modal-embed-wrap">
                 <iframe
@@ -102,17 +87,11 @@ export default function StructureModal({ cid, type, name, onClose }) {
                   title="Crystal Structure"
                   width="100%"
                   height="420px"
-                  style={{border:"none", borderRadius:"0", display:"block"}}
-                  sandbox="allow-scripts allow-same-origin"
+                  style={{border:"none", display:"block"}}
                 />
               </div>
-              <div className="struct-info-box">
-                <div className="struct-info-row"><span>Compound CID</span><span>{cid}</span></div>
-                <div className="struct-info-row"><span>View Type</span><span>Crystal Wireframe</span></div>
-                <div className="struct-info-row"><span>Controls</span><span>Drag to rotate • Scroll to zoom</span></div>
-              </div>
               <div className="struct-student-note">
-                💡 <strong>Student Note:</strong> A crystal structure shows how molecules arrange themselves in a repeating 3D pattern. This wireframe view shows only the bonds (lines) without filled atoms, making it easier to see the overall shape.
+                💡 <strong>Student Note:</strong> Crystal wireframe shows how molecules pack in a repeating 3D pattern. Only bonds (lines) are shown to make the overall shape easier to see.
               </div>
             </div>
           )}

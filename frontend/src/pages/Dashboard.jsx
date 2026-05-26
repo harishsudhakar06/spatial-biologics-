@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api";
 import { useNavigate } from "react-router-dom";
 import CompoundCard from "../components/CompoundCard";
 import StructureModal from "../components/StructureModal";
 import SummaryModal from "../components/SummaryModal";
 import SimilarModal from "../components/SimilarModal";
 import DescriptionPage from "../components/DescriptionPage";
-
-const API = "http://localhost:5000/api";
 
 export default function Dashboard({ user, setUser }) {
   const [query, setQuery] = useState("");
@@ -25,13 +23,13 @@ export default function Dashboard({ user, setUser }) {
   const nav = useNavigate();
 
   useEffect(() => {
-    axios.get(`${API}/cache-stats`)
+    api.get("/cache-stats")
       .then(r => setCacheCount(r.data.cachedCompounds))
       .catch(() => {});
   }, []);
 
   const logout = async () => {
-    await axios.post(`${API}/logout`);
+    await api.post("/logout");
     setUser(null);
     nav("/login");
   };
@@ -47,13 +45,15 @@ export default function Dashboard({ user, setUser }) {
     setDescPage(null);
     setTotalResults(0);
     try {
-      const r = await axios.get(`${API}/search?q=${encodeURIComponent(query.trim())}`);
+      const r = await api.get(
+        `/search?q=${encodeURIComponent(query.trim())}`
+      );
       setBest(r.data.best);
       setResults(r.data.results || []);
       const total = (r.data.best ? 1 : 0) + (r.data.results?.length || 0);
       setTotalResults(total);
       try {
-        const c = await axios.get(`${API}/cache-stats`);
+        const c = await api.get("/cache-stats");
         setCacheCount(c.data.cachedCompounds);
       } catch {}
     } catch (err) {
@@ -67,7 +67,10 @@ export default function Dashboard({ user, setUser }) {
     return (
       <div className="dash-wrap">
         <nav className="topbar">
-          <div className="topbar-brand">ChemVault</div>
+          <div className="topbar-left">
+            <div className="topbar-brand">ChemVault</div>
+            <div className="topbar-tagline">Chemical Compound Database</div>
+          </div>
           <div className="topbar-right">
             <div className="user-chip">👤 {user.name}</div>
             <button className="btn-logout" onClick={logout}>Logout</button>
@@ -80,8 +83,6 @@ export default function Dashboard({ user, setUser }) {
 
   return (
     <div className="dash-wrap">
-
-      {/* Top bar */}
       <nav className="topbar">
         <div className="topbar-left">
           <div className="topbar-brand">ChemVault</div>
@@ -98,14 +99,12 @@ export default function Dashboard({ user, setUser }) {
         </div>
       </nav>
 
-      {/* Hero search area */}
       <div className="hero-section">
         <div className="hero-inner">
           <h1 className="hero-title">Search Chemical Compounds</h1>
           <p className="hero-sub">
             Search by compound name or CID — access structures, properties, synonyms and more
           </p>
-
           <form onSubmit={search} className="hero-search-form">
             <div className="hero-search-bar">
               <span className="search-icon">🔍</span>
@@ -122,17 +121,16 @@ export default function Dashboard({ user, setUser }) {
             </div>
           </form>
 
-          {/* Quick links */}
           <div className="quick-links">
             <span className="quick-label">Popular searches:</span>
             {[
-              ["Aspirin", "Aspirin"],
-              ["Curcumin", "Curcumin"],
-              ["Caffeine", "Caffeine"],
-              ["Ibuprofen", "Ibuprofen"],
-              ["Quercetin", "Quercetin"],
-              ["2244", "CID 2244"],
-              ["969516", "CID 969516"],
+              ["Aspirin","Aspirin"],
+              ["Curcumin","Curcumin"],
+              ["Caffeine","Caffeine"],
+              ["Ibuprofen","Ibuprofen"],
+              ["Quercetin","Quercetin"],
+              ["2244","CID 2244"],
+              ["969516","CID 969516"],
             ].map(([val, label]) => (
               <button
                 key={val}
@@ -150,7 +148,6 @@ export default function Dashboard({ user, setUser }) {
         </div>
       </div>
 
-      {/* Info bar */}
       {!searched && (
         <div className="info-bar">
           <div className="info-cards">
@@ -186,35 +183,29 @@ export default function Dashboard({ user, setUser }) {
         </div>
       )}
 
-      {/* Results */}
       <div className="results-section">
-
-        {/* Loading skeletons */}
         {loading && (
           <div className="loading-grid">
             {[1,2,3,4,5].map(i => <div key={i} className="skeleton-card" />)}
           </div>
         )}
 
-        {/* Error — only if no results */}
         {error && !best && !loading && (
           <div className="err-msg" style={{maxWidth:"700px", margin:"1rem auto"}}>
             {error}
           </div>
         )}
 
-        {/* Results count bar */}
         {!loading && searched && totalResults > 0 && (
           <div className="results-count-bar">
             <span>
               Showing <strong>{totalResults}</strong> result{totalResults > 1 ? "s" : ""} for
               <strong> "{query}"</strong>
             </span>
-            <span className="results-source">Source: chemical database</span>
+            <span className="results-source">Source: Chemical Database</span>
           </div>
         )}
 
-        {/* Best match */}
         {!loading && best && (
           <div style={{marginBottom:"1.5rem"}}>
             <div className="best-label">BEST COMPOUND MATCH</div>
@@ -231,7 +222,6 @@ export default function Dashboard({ user, setUser }) {
           </div>
         )}
 
-        {/* Other results */}
         {!loading && results.length > 0 && (
           <div>
             <div className="results-label">
@@ -253,7 +243,6 @@ export default function Dashboard({ user, setUser }) {
           </div>
         )}
 
-        {/* No results */}
         {searched && !loading && !best && results.length === 0 && !error && (
           <div className="no-results">
             <div style={{fontSize:"2.5rem", marginBottom:"0.8rem"}}>🔬</div>
@@ -263,10 +252,8 @@ export default function Dashboard({ user, setUser }) {
             </div>
           </div>
         )}
-
       </div>
 
-      {/* Modals */}
       {modal && (
         <StructureModal
           cid={modal.cid}

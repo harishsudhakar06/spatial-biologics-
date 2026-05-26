@@ -21,7 +21,6 @@ export default function DescriptionPage({ compound, onBack }) {
 
   return (
     <div className="desc-page">
-      {/* Header */}
       <div className="desc-page-header">
         <button className="btn-back" onClick={onBack}>← Back to Results</button>
         <div className="desc-page-title">
@@ -104,9 +103,9 @@ export default function DescriptionPage({ compound, onBack }) {
                 <iframe
                   src={`https://embed.molview.org/v1/?mode=balls&cid=${cid}`}
                   title="3D Structure"
-                  width="100%" height="480px"
-                  style={{border:"none",display:"block"}}
-                  sandbox="allow-scripts allow-same-origin"
+                  width="100%"
+                  height="480px"
+                  style={{border:"none", display:"block"}}
                 />
               </div>
               <div className="struct-student-note">
@@ -124,23 +123,23 @@ export default function DescriptionPage({ compound, onBack }) {
                 <iframe
                   src={`https://embed.molview.org/v1/?mode=wireframe&cid=${cid}`}
                   title="Crystal Structure"
-                  width="100%" height="480px"
-                  style={{border:"none",display:"block"}}
-                  sandbox="allow-scripts allow-same-origin"
+                  width="100%"
+                  height="480px"
+                  style={{border:"none", display:"block"}}
                 />
               </div>
               <div className="struct-student-note">
-                💡 <strong>Student Note:</strong> Crystal wireframe shows how molecules pack in a repeating 3D pattern. Only bonds (lines) are shown — easier to see the overall shape.
+                💡 <strong>Student Note:</strong> Crystal wireframe shows how molecules pack in a repeating 3D pattern. Only bonds (lines) are shown to make the overall shape easier to see.
               </div>
             </div>
           )}
         </div>
 
-        {/* Descriptions from PubChem */}
+        {/* Descriptions */}
         <div className="desc-section">
           <h2 className="desc-section-title">🔬 Description</h2>
           {descriptions.length === 0 && (
-            <p className="desc-section-text" style={{color:"var(--muted)"}}>No description available for this compound.</p>
+            <p className="desc-section-text" style={{color:"var(--muted)"}}>No description available.</p>
           )}
           {descriptions.map((d, i) => (
             <div key={i} className="desc-entry">
@@ -180,7 +179,7 @@ export default function DescriptionPage({ compound, onBack }) {
           <table className="desc-table">
             <tbody>
               {[
-                ["XLogP (Lipophilicity)", xlogp],
+                ["XLogP", xlogp],
                 ["H-Bond Donor Count", hbondDonor],
                 ["H-Bond Acceptor Count", hbondAcceptor],
                 ["Rotatable Bond Count", rotatableBonds],
@@ -216,11 +215,11 @@ export default function DescriptionPage({ compound, onBack }) {
               ["Molecular Formula", "Shows which atoms and how many are in the molecule. Example: C9H8O4 means 9 Carbon, 8 Hydrogen, 4 Oxygen atoms."],
               ["Molecular Weight", "The total mass of one molecule. Heavier molecules move slower and dissolve differently."],
               ["SMILES", "A text code that describes the structure. Each letter is an atom, and symbols like = mean double bonds."],
-              ["XLogP", "Measures if the compound likes fat (high = fat-soluble) or water (low = water-soluble). Important for how drugs move in the body."],
+              ["XLogP", "Measures if the compound likes fat (high) or water (low). Important for how drugs move in the body."],
               ["H-Bond Donor/Acceptor", "How many hydrogen bonds the molecule can form. Affects solubility and drug activity."],
               ["TPSA", "Surface area available for water interaction. Below 140 Å² usually means better absorption in the body."],
               ["InChIKey", "A unique fingerprint for the molecule — no two different compounds share the same InChIKey."],
-              ["3D Structure", "Shows the real shape of the molecule in space. Different colors = different atoms. Rotate and zoom to explore!"],
+              ["3D Structure", "Shows the real shape of the molecule in space. Rotate and zoom to explore!"],
             ].map(([k,v]) => (
               <div key={k} className="guide-item">
                 <div className="guide-key">{k}</div>

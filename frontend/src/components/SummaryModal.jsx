@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-
-const API = "http://localhost:5000/api";
+import api from "../api";
 
 export default function SummaryModal({ cid, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    axios.get(`${API}/summary/${cid}`)
+    api.get(`/summary/${cid}`)
       .then(r => setData(r.data))
-      .catch(() => setData(null))
+      .catch(() => setError("Failed to load summary"))
       .finally(() => setLoading(false));
   }, [cid]);
 
@@ -18,20 +17,28 @@ export default function SummaryModal({ cid, onClose }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box" style={{maxWidth:"750px", maxHeight:"90vh"}}>
         <div className="modal-head">
-          <h3>Summary — CID {cid}</h3>
+          <h3>Compound Summary — CID {cid}</h3>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          {loading && <p className="modal-info-text">Loading...</p>}
+          {loading && <p className="modal-info-text">Loading summary...</p>}
+          {error && <p className="modal-info-text" style={{color:"var(--danger)"}}>{error}</p>}
           {data && (
             <>
               <div style={{display:"flex",gap:"1rem",marginBottom:"1rem",alignItems:"flex-start"}}>
                 <div className="card-img-wrap" style={{width:"140px",height:"140px",minWidth:"140px"}}>
-                  <img src={data.image2D} alt={data.name} draggable="false" onContextMenu={e=>e.preventDefault()} />
+                  <img
+                    src={data.image2D}
+                    alt={data.name}
+                    draggable="false"
+                    onContextMenu={e => e.preventDefault()}
+                  />
                 </div>
                 <div style={{flex:1}}>
                   {data.synonyms?.length > 0 && (
-                    <div className="synonym-line" style={{marginBottom:"0.5rem"}}>{data.synonyms.join("; ")}</div>
+                    <div className="synonym-line" style={{marginBottom:"0.5rem"}}>
+                      {data.synonyms.join("; ")}
+                    </div>
                   )}
                   <table className="info-table">
                     <tbody>
@@ -61,13 +68,28 @@ export default function SummaryModal({ cid, onClose }) {
 
               {data.allDescriptions?.length > 0 && (
                 <div style={{marginTop:"1rem"}}>
-                  <div className="desc-section-title" style={{fontSize:"0.85rem",marginBottom:"0.6rem"}}>🔬 Description</div>
-                  {data.allDescriptions.map((d,i) => (
+                  <div className="desc-section-title" style={{fontSize:"0.85rem",marginBottom:"0.6rem"}}>
+                    🔬 Description
+                  </div>
+                  {data.allDescriptions.map((d, i) => (
                     <div key={i} className="desc-entry">
                       <p style={{fontSize:"0.78rem",color:"#444",lineHeight:"1.6"}}>{d.text}</p>
                       {d.source && <div className="desc-source">{d.source}</div>}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {data.synonyms?.length > 0 && (
+                <div style={{marginTop:"1rem"}}>
+                  <div className="desc-section-title" style={{fontSize:"0.85rem",marginBottom:"0.5rem"}}>
+                    🏷️ Synonyms
+                  </div>
+                  <div className="syn-wrap">
+                    {data.synonyms.map((s, i) => (
+                      <span key={i} className="syn-chip">{s}</span>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
