@@ -286,7 +286,7 @@ async function fetchSmiles(cid) {
 }
 
 /* ========================= BASIC ROUTES ========================= */
-app.get("/", (req, res) =>
+app.get("/api/status", (req, res) =>
   res.json({ success: true, message: "ChemVault Backend Running", modules: ["Ligand", "Protein"] })
 );
 app.get("/api/health", (req, res) =>
