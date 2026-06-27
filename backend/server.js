@@ -1607,7 +1607,7 @@ console.log("✅ Docking routes loaded");
 const frontendDistPath = path.join(__dirname, "../frontend/dist");
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
-  app.get("*", (req, res, next) => {
+  app.get('/{*splat}', (req, res, next) => {
     if (req.path.startsWith("/api") || req.path.startsWith("/deeppk-proxy")) {
       return next();
     }
