@@ -25,7 +25,7 @@ export default function SimilarModal({ cid, onClose, onStructure }) {
             <p className="modal-info-text">No similar structures found.</p>
           )}
           {results.map(r => (
-            <div key={r.cid} style={{display:"flex",gap:"1rem",alignItems:"center",padding:"0.8rem 0",borderBottom:"1px solid var(--border2)"}}>
+            <div key={r.cid} style={{display:"flex",gap:"1rem",alignItems:"justify",padding:"0.8rem 0",borderBottom:"1px solid var(--border2)"}}>
               <div className="card-img-wrap" style={{width:"80px",height:"80px",minWidth:"80px"}}>
                 <img
                   src={r.image2D}

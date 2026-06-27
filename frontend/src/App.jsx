@@ -1,38 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import React from "react";
 import Dashboard from "./pages/Dashboard";
-import api from "./api";
+import WelcomeMessage from "./components/WelcomeMessage";
+import { useAuth } from "./context/AuthContext";
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get("/me")
-      .then((r) => setUser(r.data.user))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="splash">Loading ChemVault…</div>;
+  const { showWelcome, setShowWelcome, user } = useAuth();
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/dashboard" /> : <Login setUser={setUser} />}
-      />
-      <Route
-        path="/register"
-        element={user ? <Navigate to="/dashboard" /> : <Register />}
-      />
-      <Route
-        path="/dashboard"
-        element={user ? <Dashboard user={user} setUser={setUser} /> : <Navigate to="/login" />}
-      />
-      <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
-    </Routes>
+    <>
+      {showWelcome && (
+        <WelcomeMessage
+          username={user?.username || user?.name}
+          onDone={() => setShowWelcome(false)}
+        />
+      )}
+      <Dashboard />
+    </>
   );
 }

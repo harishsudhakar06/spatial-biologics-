@@ -94,7 +94,7 @@ export default function Login({ setUser }) {
                 required
               />
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.8rem"}}>
+            <div style={{display:"flex",alignItems:"justify",gap:"0.5rem",marginBottom:"0.8rem"}}>
               <input
                 type="checkbox"
                 id="remember"
@@ -120,4 +120,4 @@ export default function Login({ setUser }) {
       </div>
     </div>
   );
-}
+} 

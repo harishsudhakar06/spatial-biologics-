@@ -2,7 +2,14 @@ backend/node_modules/
 frontend/node_modules/
 backend/compounds_cache.json
 backend/users.json
+backend/db.json
+backend/.env
+backend/proteins/
+backend/ligands/
+backend/results/
 frontend/dist/
 *.log
 .DS_Store
 Thumbs.db
+*.backup
+*.save

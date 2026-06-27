@@ -1,0 +1,6 @@
+energy_records = []
+atom_interactions = []
+interaction_matrix = defaultdict(lambda: defaultdict(int))
+
+failed_ligands = []
+skipped_ligands = []

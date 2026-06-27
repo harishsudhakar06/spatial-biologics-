@@ -1,0 +1,13 @@
+PROTEIN_DIR = "proteins"
+LIGAND_DIR = "ligands"
+RESULT_DIR = "results"
+
+PH = 7.4
+GRID_SIZE = 25
+EXHAUSTIVENESS = 32
+NUM_MODES = 20
+SEED = 12345
+
+os.makedirs(PROTEIN_DIR, exist_ok=True)
+os.makedirs(LIGAND_DIR, exist_ok=True)
+os.makedirs(RESULT_DIR, exist_ok=True)

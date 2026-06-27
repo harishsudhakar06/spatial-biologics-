@@ -36,7 +36,7 @@ export default function Register() {
           <div className="auth-feature">✅ Search by name or CID</div>
           <div className="auth-feature">✅ 2D, 3D and Crystal structures</div>
           <div className="auth-feature">✅ Download in SDF, JSON, XML</div>
-          <div className="auth-feature">✅ Powered by PubChem</div>
+          <div className="auth-feature">✅ Integrated chemical databases</div>
         </div>
         <svg className="auth-atoms" viewBox="0 0 500 500" fill="none">
           <circle cx="250" cy="250" r="120" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
