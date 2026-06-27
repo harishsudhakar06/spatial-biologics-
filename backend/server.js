@@ -1603,6 +1603,21 @@ app.get("/api/docking/download/:filename", (req, res) => {
 
 console.log("✅ Docking routes loaded");
 
+// Serve static files from the React frontend/dist folder
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/deeppk-proxy")) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, "index.html"));
+  });
+  console.log("✅ Frontend static files linked");
+} else {
+  console.log("⚠️ Frontend static files path not found. Serving API only.");
+}
+
 /* ========================= START ========================= */
 app.listen(PORT, () => {
   console.log(`\n✅ ChemVault running on http://localhost:${PORT}\n`);
