@@ -158,16 +158,24 @@ if (EMAIL_HOST) {
 
 const transporter = nodemailer.createTransport(transporterConfig);
 
+let isTransporterReady = false;
+
 transporter.verify((err, success) => {
   if (err) {
     console.error("❌ Email transporter error:", err.message);
     console.log("   OTP will still be printed in terminal as fallback");
+    isTransporterReady = false;
   } else {
     console.log("✅ Email transporter ready — OTP emails will be sent");
+    isTransporterReady = true;
   }
 });
 
 async function sendOTPEmail(toEmail, otp) {
+  if (!isTransporterReady) {
+    console.log(`⚠️ SMTP transporter offline. Fallback to console OTP printing.`);
+    return false;
+  }
   try {
     await transporter.sendMail({
       from: `"Spatial Biologics" <${EMAIL_USER}>`,
@@ -309,51 +317,56 @@ app.post("/api/register", async (req, res) => {
     req.session.userId = newUser.id;
 
     // ── Notify admin of new registration with Excel ────────────────
-    try {
-      const { buffer: excelBuffer, total } = buildExcelBuffer();
-      const dateStr = new Date().toLocaleString("en-IN");
-      await transporter.sendMail({
-        from: `"ChemVault" <${EMAIL_USER}>`,
-        to: "customersupport@spatialbiologics.com",
-        subject: `🧪 New Registration — ${username} | Total Users: ${total}`,
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;
-                      border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:24px 32px">
-              <h2 style="color:#fff;margin:0;font-size:20px">🧪 New User Registered</h2>
-              <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px">ChemVault · Spatial Biologics</p>
-            </div>
-            <div style="padding:28px 32px;background:#fff">
-              <table style="width:100%;border-collapse:collapse;font-size:14px">
-                <tr><td style="padding:8px 0;color:#64748b;width:140px;font-weight:600">Name</td><td style="padding:8px 0;color:#1e293b">${username}</td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Email</td><td style="padding:8px 0;color:#1e293b"><a href="mailto:${email}" style="color:#2563eb">${email}</a></td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Phone</td><td style="padding:8px 0;color:#1e293b">${phone || "—"}</td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Designation</td><td style="padding:8px 0;color:#1e293b">${designation || "—"}</td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Affiliation</td><td style="padding:8px 0;color:#1e293b">${affiliation || "—"}</td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Registered On</td><td style="padding:8px 0;color:#1e293b">${dateStr}</td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Total Users</td><td style="padding:8px 0;color:#1e293b;font-weight:700">${total}</td></tr>
-              </table>
-              <div style="margin-top:16px;padding:12px 16px;background:#f0fdf4;
-                          border-radius:8px;border-left:4px solid #16a34a;
-                          font-size:13px;color:#15803d;font-weight:600">
-                ✅ Full user list attached as Excel
+    if (isTransporterReady) {
+      try {
+        const { buffer: excelBuffer, total } = buildExcelBuffer();
+        const dateStr = new Date().toLocaleString("en-IN");
+        transporter.sendMail({
+          from: `"ChemVault" <${EMAIL_USER}>`,
+          to: "customersupport@spatialbiologics.com",
+          subject: `🧪 New Registration — ${username} | Total Users: ${total}`,
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;
+                        border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+              <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:24px 32px">
+                <h2 style="color:#fff;margin:0;font-size:20px">🧪 New User Registered</h2>
+                <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px">ChemVault · Spatial Biologics</p>
+              </div>
+              <div style="padding:28px 32px;background:#fff">
+                <table style="width:100%;border-collapse:collapse;font-size:14px">
+                  <tr><td style="padding:8px 0;color:#64748b;width:140px;font-weight:600">Name</td><td style="padding:8px 0;color:#1e293b">${username}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Email</td><td style="padding:8px 0;color:#1e293b"><a href="mailto:${email}" style="color:#2563eb">${email}</a></td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Phone</td><td style="padding:8px 0;color:#1e293b">${phone || "—"}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Designation</td><td style="padding:8px 0;color:#1e293b">${designation || "—"}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Affiliation</td><td style="padding:8px 0;color:#1e293b">${affiliation || "—"}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Registered On</td><td style="padding:8px 0;color:#1e293b">${dateStr}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Total Users</td><td style="padding:8px 0;color:#1e293b;font-weight:700">${total}</td></tr>
+                </table>
+                <div style="margin-top:16px;padding:12px 16px;background:#f0fdf4;
+                            border-radius:8px;border-left:4px solid #16a34a;
+                            font-size:13px;color:#15803d;font-weight:600">
+                  ✅ Full user list attached as Excel
+                </div>
+              </div>
+              <div style="background:#f8fafc;padding:14px 32px;font-size:12px;
+                          color:#94a3b8;text-align:center">
+                Sent via ChemVault · Spatial Biologics
               </div>
             </div>
-            <div style="background:#f8fafc;padding:14px 32px;font-size:12px;
-                        color:#94a3b8;text-align:center">
-              Sent via ChemVault · Spatial Biologics
-            </div>
-          </div>
-        `,
-        attachments: [{
-          filename: `chemvault_users_${new Date().toISOString().slice(0, 10)}.xlsx`,
-          content: excelBuffer,
-          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        }],
-      });
-      console.log(`✅ Admin notified with Excel on registration: ${email}`);
-    } catch (mailErr) {
-      console.warn("⚠️ Admin notification failed:", mailErr.message);
+          `,
+          attachments: [{
+            filename: `chemvault_users_${new Date().toISOString().slice(0, 10)}.xlsx`,
+            content: excelBuffer,
+            contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }],
+        }).then(() => {
+          console.log(`✅ Admin notified with Excel on registration: ${email}`);
+        }).catch((mailErr) => {
+          console.warn("⚠️ Admin notification failed:", mailErr.message);
+        });
+      } catch (excelErr) {
+        console.warn("⚠️ Excel building failed for registration:", excelErr.message);
+      }
     }
     // ── End admin notification ─────────────────────────────────────
 
@@ -376,48 +389,53 @@ app.post("/api/login", async (req, res) => {
     req.session.userId = user.id;
 
     // ── Notify admin on login with Excel ──────────────────────────
-    try {
-      const { buffer: excelBuffer, total } = buildExcelBuffer();
-      const dateStr = new Date().toLocaleString("en-IN");
-      await transporter.sendMail({
-        from: `"ChemVault" <${EMAIL_USER}>`,
-        to: "customersupport@spatialbiologics.com",
-        subject: `🔐 User Login — ${user.username} | Total Users: ${total}`,
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;
-                      border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:24px 32px">
-              <h2 style="color:#fff;margin:0;font-size:20px">🔐 User Signed In</h2>
-              <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px">ChemVault · Spatial Biologics</p>
-            </div>
-            <div style="padding:28px 32px;background:#fff">
-              <table style="width:100%;border-collapse:collapse;font-size:14px">
-                <tr><td style="padding:8px 0;color:#64748b;width:140px;font-weight:600">Name</td><td style="padding:8px 0;color:#1e293b">${user.username}</td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Email</td><td style="padding:8px 0;color:#1e293b"><a href="mailto:${user.email}" style="color:#2563eb">${user.email}</a></td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Login Time</td><td style="padding:8px 0;color:#1e293b">${dateStr}</td></tr>
-                <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Total Users</td><td style="padding:8px 0;color:#1e293b;font-weight:700">${total}</td></tr>
-              </table>
-              <div style="margin-top:16px;padding:12px 16px;background:#eff6ff;
-                          border-radius:8px;border-left:4px solid #2563eb;
-                          font-size:13px;color:#1d4ed8;font-weight:600">
-                📎 Full user list attached as Excel
+    if (isTransporterReady) {
+      try {
+        const { buffer: excelBuffer, total } = buildExcelBuffer();
+        const dateStr = new Date().toLocaleString("en-IN");
+        transporter.sendMail({
+          from: `"ChemVault" <${EMAIL_USER}>`,
+          to: "customersupport@spatialbiologics.com",
+          subject: `🔐 User Login — ${user.username} | Total Users: ${total}`,
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;
+                        border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+              <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:24px 32px">
+                <h2 style="color:#fff;margin:0;font-size:20px">🔐 User Signed In</h2>
+                <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px">ChemVault · Spatial Biologics</p>
+              </div>
+              <div style="padding:28px 32px;background:#fff">
+                <table style="width:100%;border-collapse:collapse;font-size:14px">
+                  <tr><td style="padding:8px 0;color:#64748b;width:140px;font-weight:600">Name</td><td style="padding:8px 0;color:#1e293b">${user.username}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Email</td><td style="padding:8px 0;color:#1e293b"><a href="mailto:${user.email}" style="color:#2563eb">${user.email}</a></td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Login Time</td><td style="padding:8px 0;color:#1e293b">${dateStr}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-weight:600">Total Users</td><td style="padding:8px 0;color:#1e293b;font-weight:700">${total}</td></tr>
+                </table>
+                <div style="margin-top:16px;padding:12px 16px;background:#eff6ff;
+                            border-radius:8px;border-left:4px solid #2563eb;
+                            font-size:13px;color:#1d4ed8;font-weight:600">
+                  📎 Full user list attached as Excel
+                </div>
+              </div>
+              <div style="background:#f8fafc;padding:14px 32px;font-size:12px;
+                          color:#94a3b8;text-align:center">
+                Sent via ChemVault · Spatial Biologics
               </div>
             </div>
-            <div style="background:#f8fafc;padding:14px 32px;font-size:12px;
-                        color:#94a3b8;text-align:center">
-              Sent via ChemVault · Spatial Biologics
-            </div>
-          </div>
-        `,
-        attachments: [{
-          filename: `chemvault_users_${new Date().toISOString().slice(0, 10)}.xlsx`,
-          content: excelBuffer,
-          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        }],
-      });
-      console.log(`✅ Admin notified with Excel on login: ${user.email}`);
-    } catch (mailErr) {
-      console.warn("⚠️ Admin login notification failed:", mailErr.message);
+          `,
+          attachments: [{
+            filename: `chemvault_users_${new Date().toISOString().slice(0, 10)}.xlsx`,
+            content: excelBuffer,
+            contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }],
+        }).then(() => {
+          console.log(`✅ Admin notified with Excel on login: ${user.email}`);
+        }).catch((mailErr) => {
+          console.warn("⚠️ Admin login notification failed:", mailErr.message);
+        });
+      } catch (excelErr) {
+        console.warn("⚠️ Excel building failed for login:", excelErr.message);
+      }
     }
     // ── End login notification ─────────────────────────────────────
 
@@ -876,76 +894,81 @@ app.post("/api/workspace", async (req, res) => {
       const username = user ? user.username : "Unknown User";
       const email = user ? user.email : "N/A";
       
-      try {
-        await transporter.sendMail({
-          from: `"ChemVault Workspace" <${EMAIL_USER}>`,
-          to: "customersupport@spatialbiologics.com",
-          subject: `📂 Data Added to Project — ${username}`,
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-              <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:24px 32px">
-                <h2 style="color:#fff;margin:0;font-size:20px">📂 Project Data Added</h2>
-                <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px">ChemVault · Spatial Biologics</p>
-              </div>
-              <div style="padding:28px 32px;background:#fff">
-                <p style="font-size:14px;color:#475569">User <strong>${username}</strong> (${email}) has added new files/data to their ChemVault workspace project.</p>
-                <h4 style="color:#1e3a8a;margin-bottom:8px">Details of Added Items:</h4>
-                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">
-                  <thead>
-                    <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
-                      <th style="padding:8px;text-align:left;color:#475569">Project</th>
-                      <th style="padding:8px;text-align:left;color:#475569">Type</th>
-                      <th style="padding:8px;text-align:left;color:#475569">Item Identifier/Name</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${newItems.downloadedLigands.map(l => `
-                      <tr style="border-bottom:1px solid #f1f5f9">
-                        <td style="padding:8px;color:#1e293b">${l.projectId}</td>
-                        <td style="padding:8px;color:#475569">Ligand (PubChem)</td>
-                        <td style="padding:8px;color:#1e293b">CID ${l.cid} (${l.name || 'Unknown'})</td>
+      if (isTransporterReady) {
+        try {
+          transporter.sendMail({
+            from: `"ChemVault Workspace" <${EMAIL_USER}>`,
+            to: "customersupport@spatialbiologics.com",
+            subject: `📂 Data Added to Project — ${username}`,
+            html: `
+              <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+                <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:24px 32px">
+                  <h2 style="color:#fff;margin:0;font-size:20px">📂 Project Data Added</h2>
+                  <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px">ChemVault · Spatial Biologics</p>
+                </div>
+                <div style="padding:28px 32px;background:#fff">
+                  <p style="font-size:14px;color:#475569">User <strong>${username}</strong> (${email}) has added new files/data to their ChemVault workspace project.</p>
+                  <h4 style="color:#1e3a8a;margin-bottom:8px">Details of Added Items:</h4>
+                  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">
+                    <thead>
+                      <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+                        <th style="padding:8px;text-align:left;color:#475569">Project</th>
+                        <th style="padding:8px;text-align:left;color:#475569">Type</th>
+                        <th style="padding:8px;text-align:left;color:#475569">Item Identifier/Name</th>
                       </tr>
-                    `).join('')}
-                    ${newItems.ligandFiles.map(f => `
-                      <tr style="border-bottom:1px solid #f1f5f9">
-                        <td style="padding:8px;color:#1e293b">${f.projectId}</td>
-                        <td style="padding:8px;color:#475569">Ligand File</td>
-                        <td style="padding:8px;color:#1e293b">${f.fileName || f.name} (${f.label} - ${f.type})</td>
-                      </tr>
-                    `).join('')}
-                    ${newItems.downloadedProteins.map(p => `
-                      <tr style="border-bottom:1px solid #f1f5f9">
-                        <td style="padding:8px;color:#1e293b">${p.projectId}</td>
-                        <td style="padding:8px;color:#475569">Protein</td>
-                        <td style="padding:8px;color:#1e293b">${p.accession} (${p.format.toUpperCase()})</td>
-                      </tr>
-                    `).join('')}
-                    ${newItems.dockingJobs.map(j => `
-                      <tr style="border-bottom:1px solid #f1f5f9">
-                        <td style="padding:8px;color:#1e293b">${j.projectId}</td>
-                        <td style="padding:8px;color:#475569">Docking Job</td>
-                        <td style="padding:8px;color:#1e293b">${j.name}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-                <div style="margin-top:28px;text-align:center;border-top:1px solid #e2e8f0;padding-top:20px">
-                  <p style="font-size:12px;color:#64748b;margin-bottom:12px">Use the option below if you need to clear all files saved by this user:</p>
-                  <a href="${baseUrl}/api/admin/clear-workspace?userId=${req.session.userId}" 
-                     style="background:#dc2626;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;display:inline-block">
-                    🗑️ Delete Workspace Data (Clear Files)
-                  </a>
+                    </thead>
+                    <tbody>
+                      ${newItems.downloadedLigands.map(l => `
+                        <tr style="border-bottom:1px solid #f1f5f9">
+                          <td style="padding:8px;color:#1e293b">${l.projectId}</td>
+                          <td style="padding:8px;color:#475569">Ligand (PubChem)</td>
+                          <td style="padding:8px;color:#1e293b">CID ${l.cid} (${l.name || 'Unknown'})</td>
+                        </tr>
+                      `).join('')}
+                      ${newItems.ligandFiles.map(f => `
+                        <tr style="border-bottom:1px solid #f1f5f9">
+                          <td style="padding:8px;color:#1e293b">${f.projectId}</td>
+                          <td style="padding:8px;color:#475569">Ligand File</td>
+                          <td style="padding:8px;color:#1e293b">${f.fileName || f.name} (${f.label} - ${f.type})</td>
+                        </tr>
+                      `).join('')}
+                      ${newItems.downloadedProteins.map(p => `
+                        <tr style="border-bottom:1px solid #f1f5f9">
+                          <td style="padding:8px;color:#1e293b">${p.projectId}</td>
+                          <td style="padding:8px;color:#475569">Protein</td>
+                          <td style="padding:8px;color:#1e293b">${p.accession} (${p.format.toUpperCase()})</td>
+                        </tr>
+                      `).join('')}
+                      ${newItems.dockingJobs.map(j => `
+                        <tr style="border-bottom:1px solid #f1f5f9">
+                          <td style="padding:8px;color:#1e293b">${j.projectId}</td>
+                          <td style="padding:8px;color:#475569">Docking Job</td>
+                          <td style="padding:8px;color:#1e293b">${j.name}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                  <div style="margin-top:28px;text-align:center;border-top:1px solid #e2e8f0;padding-top:20px">
+                    <p style="font-size:12px;color:#64748b;margin-bottom:12px">Use the option below if you need to clear all files saved by this user:</p>
+                    <a href="${baseUrl}/api/admin/clear-workspace?userId=${req.session.userId}" 
+                       style="background:#dc2626;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;display:inline-block">
+                      🗑️ Delete Workspace Data (Clear Files)
+                    </a>
+                  </div>
+                </div>
+                <div style="background:#f8fafc;padding:16px 32px;font-size:12px;color:#94a3b8;text-align:center">
+                  Sent via ChemVault · Spatial Biologics
                 </div>
               </div>
-              <div style="background:#f8fafc;padding:16px 32px;font-size:12px;color:#94a3b8;text-align:center">
-                Sent via ChemVault · Spatial Biologics
-              </div>
-            </div>
-          `
-        });
-        console.log(`✅ Admin notified of new workspace data added by user: ${username}`);
-      } catch (mailErr) {
-        console.warn("⚠️ Admin workspace data notification failed:", mailErr.message);
+            `
+          }).then(() => {
+            console.log(`✅ Admin notified of new workspace data added by user: ${username}`);
+          }).catch((mailErr) => {
+            console.warn("⚠️ Admin workspace data notification failed:", mailErr.message);
+          });
+        } catch (err) {
+          console.warn("⚠️ Workspace notification packaging failed:", err.message);
+        }
       }
     }
     
@@ -1057,7 +1080,7 @@ async function checkWorkspaceDataRetention() {
           hasChanges = true;
         }
 
-        if (warnUser) {
+        if (warnUser && isTransporterReady) {
           try {
             await transporter.sendMail({
               from: `"ChemVault Support" <${EMAIL_USER}>`,
