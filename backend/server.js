@@ -18,7 +18,7 @@ require("dotenv").config();
 dns.setDefaultResultOrder("ipv4first");
 
 const app = express();
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 const PORT = 5000;
 
 /* ========================= MONGODB SETUP ========================= */
@@ -170,6 +170,7 @@ if (EMAIL_HOST && EMAIL_HOST !== "smtp.gmail.com") {
 }
 
 const transporter = nodemailer.createTransport(transporterConfig);
+console.log("[DEBUG-EMAIL] Transporter config:", JSON.stringify({ service: transporterConfig.service, host: transporterConfig.host, port: transporterConfig.port, secure: transporterConfig.secure, authUser: transporterConfig.auth?.user }, null, 2));
 
 let isTransporterReady = false;
 
@@ -186,8 +187,9 @@ transporter.verify((err, success) => {
 });
 
 async function sendOTPEmail(toEmail, otp) {
+  console.log("[DEBUG-EMAIL] Attempting to send OTP email to:", toEmail);
   if (!isTransporterReady) {
-    console.log(`⚠️ SMTP transporter offline. Fallback: OTP shown in UI.`);
+    console.log(`[DEBUG-EMAIL] SMTP transporter offline. Fallback: OTP shown in UI.`);
     return false;
   }
   try {
@@ -220,7 +222,7 @@ async function sendOTPEmail(toEmail, otp) {
     console.log(`✅ OTP email sent to ${toEmail}`);
     return true;
   } catch (err) {
-    console.error("❌ Email send failed:", err.message);
+    console.error("[DEBUG-EMAIL] Full OTP email error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
     return false;
   }
 }
@@ -245,8 +247,9 @@ function validatePassword(password) {
 
 /* ========================= WELCOME EMAIL ========================= */
 async function sendWelcomeEmail(user) {
+  console.log("[DEBUG-EMAIL] Attempting to send welcome email to:", user.email);
   if (!isTransporterReady) {
-    console.log(`⚠️ SMTP transporter offline. Welcome email not sent to ${user.email}`);
+    console.log(`[DEBUG-EMAIL] SMTP transporter offline. Welcome email not sent to ${user.email}`);
     return false;
   }
   try {
@@ -296,7 +299,7 @@ async function sendWelcomeEmail(user) {
     console.log(`✅ Welcome email sent to ${user.email}`);
     return true;
   } catch (err) {
-    console.error("❌ Welcome email failed:", err.message);
+    console.error("[DEBUG-EMAIL] Full welcome email error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
     return false;
   }
 }
@@ -508,7 +511,8 @@ app.post("/api/login", async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: "Invalid email or password" });
 
-    req.session.userId = user.id || user._id?.toString();
+    req.session.userId = user._id.toString();
+    console.log("[DEBUG-AUTH] Session set after login - userId:", req.session.userId, "sessionID:", req.sessionID);
 
     // ── Notify admin on login with Excel ──────────────────────────
     if (isTransporterReady) {
@@ -561,7 +565,7 @@ app.post("/api/login", async (req, res) => {
     }
     // ── End login notification ─────────────────────────────────────
 
-    res.json({ success: true, user: { id: user.id || user._id?.toString(), username: user.username, email: user.email } });
+    res.json({ success: true, user: { id: user._id.toString(), username: user.username, email: user.email } });
   } catch (err) {
     console.error("Login error:", err.message);
     res.status(500).json({ error: "Login failed" });
@@ -575,6 +579,7 @@ app.post("/api/logout", (req, res) => {
 
 app.get("/api/me", async (req, res) => {
   try {
+    console.log("[DEBUG-AUTH] /api/me called - sessionID:", req.sessionID, "userId:", req.session?.userId, "cookie:", req.headers.cookie);
     if (!req.session?.userId)
       return res.status(401).json({ error: "Not logged in" });
     const user = await getUserById(req.session.userId);
@@ -582,7 +587,7 @@ app.get("/api/me", async (req, res) => {
       req.session.destroy();
       return res.status(401).json({ error: "User not found" });
     }
-    res.json({ id: user.id || user._id?.toString(), username: user.username, email: user.email });
+    res.json({ id: user._id.toString(), username: user.username, email: user.email });
   } catch (err) {
     res.status(401).json({ error: "Not logged in" });
   }
