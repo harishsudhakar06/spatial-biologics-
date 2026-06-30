@@ -147,13 +147,15 @@ if (EMAIL_HOST && EMAIL_HOST !== "smtp.gmail.com") {
   console.log(`📧 Email: custom SMTP ${EMAIL_HOST}:${EMAIL_PORT}`);
 } else if (EMAIL_USER.includes("@gmail.com") || EMAIL_HOST === "smtp.gmail.com") {
   transporterConfig = {
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
     connectionTimeout: 10000,
     greetingTimeout: 5000,
     socketTimeout: 10000,
   };
-  console.log(`📧 Email: Gmail SMTP`);
+  console.log(`📧 Email: Gmail SMTP (explicit IPv4, port 465)`);
 } else {
   const domain = EMAIL_USER.split("@")[1];
   transporterConfig = {
