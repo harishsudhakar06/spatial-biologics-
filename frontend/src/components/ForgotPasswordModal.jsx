@@ -69,11 +69,8 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
       const result = await sendForgotPasswordOTP(email);
       if (result.devOtp) {
         setDevOtp(result.devOtp);
-        setMessage(`OTP sent. (Dev fallback OTP: ${result.devOtp})`);
-      } else {
-        setDevOtp("");
-        setMessage("OTP sent to your Gmail!");
       }
+      setMessage("OTP sent to your email!");
       setTimer(180);
       setCanResend(false);
       setStep("otp");
