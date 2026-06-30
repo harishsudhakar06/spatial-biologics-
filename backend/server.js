@@ -31,151 +31,70 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/chemvault"
 
 connectDB();
 
-/* ========================= DB HELPERS (MongoDB + JSON fallback) ========================= */
-const DB_FILE = path.join(__dirname, "db.json");
-
-function initDB() {
-  if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], otps: [] }, null, 2));
-  }
-}
-
-function readDB() {
-  initDB();
-  try { return JSON.parse(fs.readFileSync(DB_FILE, "utf8")); }
-  catch { return { users: [], otps: [] }; }
-}
-
-function writeDB(data) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
+/* ========================= DB HELPERS (MongoDB Only) ========================= */
 
 async function getUserByEmail(email) {
-  if (isMongoConnected()) {
-    return await User.findOne({ email }).lean();
-  }
-  return readDB().users.find(u => u.email === email) || null;
+  return await User.findOne({ email }).lean();
 }
 
 async function getUserById(id) {
-  if (isMongoConnected()) {
-    return await User.findById(id).lean();
-  }
-  return readDB().users.find(u => u.id === id) || null;
+  return await User.findById(id).lean();
 }
 
 async function createUser({ username, email, password, phone = "", designation = "", affiliation = "" }) {
-  if (isMongoConnected()) {
-    const newUser = new User({ username, email, password, phone, designation, affiliation });
-    await newUser.save();
-    return { id: newUser._id.toString(), username: newUser.username, email: newUser.email };
-  }
-  const db = readDB();
-  const newUser = {
-    id: Date.now().toString(), username, email, password,
-    phone, designation, affiliation, createdAt: new Date().toISOString()
-  };
-  db.users.push(newUser);
-  writeDB(db);
-  return newUser;
+  const newUser = new User({ username, email, password, phone, designation, affiliation });
+  await newUser.save();
+  return { id: newUser._id.toString(), username: newUser.username, email: newUser.email };
 }
 
 async function updateUserPassword(email, hashedPassword) {
-  if (isMongoConnected()) {
-    const result = await User.findOneAndUpdate({ email }, { password: hashedPassword });
-    return !!result;
-  }
-  const db = readDB();
-  const idx = db.users.findIndex(u => u.email === email);
-  if (idx === -1) return false;
-  db.users[idx].password = hashedPassword;
-  writeDB(db);
-  return true;
+  const result = await User.findOneAndUpdate(
+    { email },
+    { password: hashedPassword, updatedAt: new Date() }
+  );
+  return !!result;
 }
 
 async function saveOTP(email, otp) {
-  if (isMongoConnected()) {
-    await OTP.deleteMany({ email });
-    await OTP.create({ email, otp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) });
-    return;
-  }
-  const db = readDB();
-  db.otps = db.otps.filter(o => o.email !== email);
-  db.otps.push({ email, otp, expiresAt: Date.now() + 5 * 60 * 1000 });
-  writeDB(db);
+  await OTP.deleteMany({ email });
+  await OTP.create({ email, otp, expiresAt: new Date(Date.now() + 3 * 60 * 1000) });
 }
 
 async function getOTP(email) {
-  if (isMongoConnected()) {
-    return await OTP.findOne({ email }).lean();
-  }
-  return readDB().otps.find(o => o.email === email) || null;
+  return await OTP.findOne({ email }).lean();
 }
 
 async function deleteOTP(email) {
-  if (isMongoConnected()) {
-    await OTP.deleteMany({ email });
-    return;
-  }
-  const db = readDB();
-  db.otps = db.otps.filter(o => o.email !== email);
-  writeDB(db);
+  await OTP.deleteMany({ email });
 }
 
 async function cleanExpiredOTPs() {
-  if (isMongoConnected()) {
-    await OTP.deleteMany({ expiresAt: { $lt: new Date() } });
-    return;
-  }
-  const db = readDB();
-  db.otps = db.otps.filter(o => o.expiresAt > Date.now());
-  writeDB(db);
+  await OTP.deleteMany({ expiresAt: { $lt: new Date() } });
 }
 
 async function getAllUsers() {
-  if (isMongoConnected()) {
-    return await User.find().lean();
-  }
-  return readDB().users || [];
+  return await User.find().lean();
 }
 
 async function getWorkspace(userId) {
-  if (isMongoConnected()) {
-    const ws = await Workspace.findOne({ userId }).lean();
-    return ws ? { activeProjectId: ws.activeProjectId, projects: ws.projects } : null;
-  }
-  const db = readDB();
-  if (!db.workspaces) db.workspaces = {};
-  return db.workspaces[userId] || null;
+  const ws = await Workspace.findOne({ userId }).lean();
+  return ws ? { activeProjectId: ws.activeProjectId, projects: ws.projects } : null;
 }
 
 async function saveWorkspace(userId, workspace) {
-  if (isMongoConnected()) {
-    await Workspace.findOneAndUpdate(
-      { userId },
-      { $set: { activeProjectId: workspace.activeProjectId, projects: workspace.projects } },
-      { upsert: true }
-    );
-    return;
-  }
-  const db = readDB();
-  if (!db.workspaces) db.workspaces = {};
-  db.workspaces[userId] = workspace;
-  writeDB(db);
+  await Workspace.findOneAndUpdate(
+    { userId },
+    { $set: { activeProjectId: workspace.activeProjectId, projects: workspace.projects } },
+    { upsert: true }
+  );
 }
 
 async function getAllWorkspaces() {
-  if (isMongoConnected()) {
-    const all = await Workspace.find().lean();
-    const map = {};
-    all.forEach(w => { map[w.userId] = { activeProjectId: w.activeProjectId, projects: w.projects }; });
-    return map;
-  }
-  const db = readDB();
-  return db.workspaces || {};
+  const all = await Workspace.find().lean();
+  const map = {};
+  all.forEach(w => { map[w.userId] = { activeProjectId: w.activeProjectId, projects: w.projects }; });
+  return map;
 }
-
-initDB();
 
 /* ========================= EXCEL HELPER ========================= */
 async function buildExcelBuffer() {
@@ -285,7 +204,7 @@ async function sendOTPEmail(toEmail, otp) {
           </div>
           <h2 style="color:#111827;font-size:18px;margin-bottom:8px">Password Reset OTP</h2>
           <p style="color:#6b7280;font-size:14px;margin-bottom:20px">
-            Use the OTP below to reset your password. It expires in <strong>5 minutes</strong>.
+            Use the OTP below to reset your password. It expires in <strong>3 minutes</strong>.
           </p>
           <div style="font-size:36px;font-weight:800;color:#2563eb;letter-spacing:10px;
                       text-align:center;padding:20px;background:#eff6ff;
@@ -302,6 +221,82 @@ async function sendOTPEmail(toEmail, otp) {
     return true;
   } catch (err) {
     console.error("❌ Email send failed:", err.message);
+    return false;
+  }
+}
+
+/* ========================= PASSWORD VALIDATION ========================= */
+function validatePassword(password) {
+  const errors = [];
+  if (password.length < 8) {
+    errors.push("Password must be at least 8 characters");
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Password must contain at least 1 uppercase letter");
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push("Password must contain at least 1 lowercase letter");
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("Password must contain at least 1 special character");
+  }
+  return errors;
+}
+
+/* ========================= WELCOME EMAIL ========================= */
+async function sendWelcomeEmail(user) {
+  if (!isTransporterReady) {
+    console.log(`⚠️ SMTP transporter offline. Welcome email not sent to ${user.email}`);
+    return false;
+  }
+  try {
+    await transporter.sendMail({
+      from: `"Spatial Biologics" <${EMAIL_USER}>`,
+      to: user.email,
+      subject: `Welcome to ChemVault, ${user.username}!`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+          <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:28px 32px;text-align:center">
+            <div style="font-size:24px;margin-bottom:8px">🧪</div>
+            <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Spatial Biologics</h1>
+            <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px">ChemVault Platform</p>
+          </div>
+          <div style="padding:32px;background:#fff">
+            <h2 style="color:#111827;font-size:20px;margin:0 0 12px">Welcome, ${user.username}!</h2>
+            <p style="color:#4b5563;font-size:14px;line-height:1.6;margin:0 0 20px">
+              Your account has been successfully created. You now have access to ChemVault's powerful suite of drug discovery and bioinformatics tools.
+            </p>
+            <div style="background:#f0f9ff;border-radius:10px;padding:20px;margin:0 0 20px;border-left:4px solid #2563eb">
+              <h3 style="color:#1e40af;font-size:14px;margin:0 0 10px;font-weight:600">What you can do with ChemVault:</h3>
+              <ul style="color:#4b5563;font-size:13px;line-height:1.8;margin:0;padding-left:20px">
+                <li>Search and analyze small molecule ligands</li>
+                <li>Perform protein-ligand docking simulations</li>
+                <li>Run ADMET predictions for drug candidates</li>
+                <li>Access protein structures from PDB database</li>
+                <li>Manage your research workspace collaboratively</li>
+              </ul>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:0 0 20px">
+              <p style="color:#64748b;font-size:13px;margin:0">
+                <strong>Your registered email:</strong> ${user.email}
+              </p>
+            </div>
+            <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0">
+              If you have any questions or need assistance, feel free to reach out to our support team. We're here to help you make the most of your research.
+            </p>
+          </div>
+          <div style="background:#f8fafc;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="color:#9ca3af;font-size:11px;margin:0">
+              © ${new Date().getFullYear()} Spatial Biologics · ChemVault. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ Welcome email sent to ${user.email}`);
+    return true;
+  } catch (err) {
+    console.error("❌ Welcome email failed:", err.message);
     return false;
   }
 }
@@ -340,27 +335,22 @@ let sessionConfig = {
   },
 };
 
-// Use MongoStore only if MONGO_URI is explicitly set (e.g., production with MongoDB available)
-// In local dev without MongoDB, MemoryStore is fine since user data persists in db.json
-if (process.env.MONGO_URI) {
-  try {
-    const store = MongoStore.create({
-      mongoUrl: MONGO_URI,
-      collectionName: "sessions",
-      ttl: 30 * 24 * 60 * 60,
-      autoRemove: "native",
-      mongoOptions: { serverSelectionTimeoutMS: 3000 },
-    });
-    store.on("error", (err) => {
-      console.warn("⚠️ MongoStore session error:", err.message);
-    });
-    sessionConfig.store = store;
-    console.log("✅ Session store: MongoDB (connect-mongo)");
-  } catch (err) {
-    console.warn("⚠️ MongoStore init failed, using MemoryStore:", err.message);
-  }
-} else {
-  console.log("⚠️ No MONGO_URI set — sessions stored in memory (resets on restart)");
+// Use MongoStore for persistent session storage
+try {
+  const store = MongoStore.create({
+    mongoUrl: MONGO_URI,
+    collectionName: "sessions",
+    ttl: 30 * 24 * 60 * 60,
+    autoRemove: "native",
+    mongoOptions: { serverSelectionTimeoutMS: 3000 },
+  });
+  store.on("error", (err) => {
+    console.warn("⚠️ MongoStore session error:", err.message);
+  });
+  sessionConfig.store = store;
+  console.log("✅ Session store: MongoDB (connect-mongo)");
+} catch (err) {
+  console.warn("⚠️ MongoStore init failed, using MemoryStore:", err.message);
 }
 
 app.use(session(sessionConfig));
@@ -432,10 +422,21 @@ app.post("/api/register", async (req, res) => {
     if (await getUserByEmail(email))
       return res.status(400).json({ error: "An account with this email already exists" });
 
+    // Password policy validation
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ error: passwordErrors[0] });
+    }
+
     const hashed  = await bcrypt.hash(password, 10);
     const newUser = await createUser({ username, email, password: hashed, phone, designation, affiliation });
 
     req.session.userId = newUser.id;
+
+    // Send welcome email to user
+    sendWelcomeEmail({ username, email }).catch(err => {
+      console.warn("⚠️ Welcome email failed:", err.message);
+    });
 
     // ── Notify admin of new registration with Excel ────────────────
     if (isTransporterReady) {
@@ -624,8 +625,11 @@ app.post("/api/forgot-password/verify-otp", async (req, res) => {
     if (!email || !otp || !newPassword)
       return res.status(400).json({ error: "Email, OTP and new password are all required" });
 
-    if (newPassword.length < 6)
-      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    // Password policy validation
+    const passwordErrors = validatePassword(newPassword);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ error: passwordErrors[0] });
+    }
 
     const record = await getOTP(email);
     if (!record)

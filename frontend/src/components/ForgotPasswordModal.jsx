@@ -2,6 +2,24 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
 
+// Password validation helper
+function validatePassword(password) {
+  const errors = [];
+  if (password.length < 8) {
+    errors.push("at least 8 characters");
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("at least 1 uppercase letter");
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push("at least 1 lowercase letter");
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("at least 1 special character");
+  }
+  return errors;
+}
+
 export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
   const { sendForgotPasswordOTP, verifyOTPAndResetPassword } = useAuth();
   
@@ -19,7 +37,7 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
   const [canResend, setCanResend] = useState(false);
   const [devOtp, setDevOtp] = useState("");
 
-  // OTP Timer - 30 seconds
+  // OTP Timer - 3 minutes
   useEffect(() => {
     if (timer > 0) {
       const interval = setInterval(() => {
@@ -40,8 +58,9 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
       return;
     }
     
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+    const passwordErrors = validatePassword(newPassword);
+    if (passwordErrors.length > 0) {
+      setError(`Password must contain ${passwordErrors.join(", ")}`);
       return;
     }
 
@@ -55,7 +74,7 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
         setDevOtp("");
         setMessage("OTP sent to your Gmail!");
       }
-      setTimer(30);
+      setTimer(180);
       setCanResend(false);
       setStep("otp");
     } catch (err) {
@@ -77,7 +96,7 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
         setDevOtp("");
         setMessage("OTP resent to your Gmail!");
       }
-      setTimer(30);
+      setTimer(180);
       setCanResend(false);
       setOtp("");
     } catch (err) {
@@ -153,9 +172,9 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Min. 8 chars, 1 uppercase, 1 special"
                   required
-                  minLength="6"
+                  minLength="8"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 pr-10"
                 />
                 <button
@@ -175,9 +194,9 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Repeat password"
                   required
-                  minLength="6"
+                  minLength="8"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 pr-10"
                 />
                 <button

@@ -3,6 +3,24 @@ import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { FlaskConical, Eye, EyeOff, Mail, ShieldAlert } from "lucide-react";
 
+// Password validation helper
+function validatePassword(password) {
+  const errors = [];
+  if (password.length < 8) {
+    errors.push("at least 8 characters");
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("at least 1 uppercase letter");
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push("at least 1 lowercase letter");
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("at least 1 special character");
+  }
+  return errors;
+}
+
 export default function LoginPage({ initialMode = "login", embedded = false }) {
   const [mode, setMode] = useState(initialMode);
   const [error, setError] = useState("");
@@ -86,8 +104,9 @@ export default function LoginPage({ initialMode = "login", embedded = false }) {
       setError("Passwords do not match.");
       return;
     }
-    if (regForm.password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    const passwordErrors = validatePassword(regForm.password);
+    if (passwordErrors.length > 0) {
+      setError(`Password must contain ${passwordErrors.join(", ")}.`);
       return;
     }
     setLoading(true);
@@ -111,13 +130,17 @@ export default function LoginPage({ initialMode = "login", embedded = false }) {
     setError("");
     if (!forgotEmail) { setError("Please enter your email."); return; }
     if (forgotNewPassword !== forgotConfirmPassword) { setError("Passwords do not match."); return; }
-    if (forgotNewPassword.length < 6) { setError("Password must be at least 6 characters."); return; }
+    const passwordErrors = validatePassword(forgotNewPassword);
+    if (passwordErrors.length > 0) {
+      setError(`Password must contain ${passwordErrors.join(", ")}.`);
+      return;
+    }
     setLoading(true);
     try {
       const data = await sendForgotPasswordOTP(forgotEmail);
       setSuccess(data?.message || "OTP sent to your email.");
       setForgotStep("verify");
-      setForgotTimer(30);
+      setForgotTimer(180);
       setCanResend(false);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to send OTP.");
@@ -150,7 +173,7 @@ export default function LoginPage({ initialMode = "login", embedded = false }) {
     try {
       const data = await sendForgotPasswordOTP(forgotEmail);
       setSuccess(data?.message || "OTP resent.");
-      setForgotTimer(30);
+      setForgotTimer(180);
       setCanResend(false);
       setForgotOtp("");
     } catch (err) {
@@ -381,7 +404,7 @@ export default function LoginPage({ initialMode = "login", embedded = false }) {
                     </label>
                     <div className="relative">
                       <input type={showRegPass ? "text" : "password"} required
-                        placeholder="Min. 6 chars" minLength={6}
+                        placeholder="Min. 8 chars, 1 uppercase, 1 special" minLength={8}
                         value={regForm.password}
                         onChange={e => setRegForm({ ...regForm, password: e.target.value })}
                         className="w-full rounded-xl px-3.5 py-2.5 pr-9 text-sm premium-input"
@@ -452,7 +475,7 @@ export default function LoginPage({ initialMode = "login", embedded = false }) {
                   </label>
                   <div className="relative">
                     <input type={showForgotPass ? "text" : "password"} required
-                      placeholder="••••••••" minLength={6}
+                      placeholder="Min. 8 chars, 1 uppercase, 1 special" minLength={8}
                       value={forgotNewPassword}
                       onChange={e => setForgotNewPassword(e.target.value)}
                       className="w-full rounded-xl px-3.5 py-2.5 pr-9 text-sm premium-input"
@@ -469,7 +492,7 @@ export default function LoginPage({ initialMode = "login", embedded = false }) {
                   </label>
                   <div className="relative">
                     <input type={showForgotConfirm ? "text" : "password"} required
-                      placeholder="••••••••" minLength={6}
+                      placeholder="Repeat password" minLength={8}
                       value={forgotConfirmPassword}
                       onChange={e => setForgotConfirmPassword(e.target.value)}
                       className="w-full rounded-xl px-3.5 py-2.5 pr-9 text-sm premium-input"
