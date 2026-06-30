@@ -2132,3 +2132,414 @@ body, .min-h-screen {
 .premium-btn:active {
   transform: translateY(1px) !important;
 }
+
+/* ───────────────────────────────────────────────────────────────────────────── */
+/* ─── Dark Mode: ADMET Module (DeepPKModule.jsx) ─────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────── */
+
+.dark [style*="color: #333"],
+.dark [style*="color: rgb(51, 51, 51)"] {
+  color: var(--text) !important;
+}
+
+.dark [style*="color: #555"],
+.dark [style*="color: rgb(85, 85, 85)"] {
+  color: var(--muted) !important;
+}
+
+.dark [style*="color: #777"],
+.dark [style*="color: rgb(119, 119, 119)"] {
+  color: var(--muted) !important;
+}
+
+.dark [style*="color: #aaa"],
+.dark [style*="color: rgb(170, 170, 170)"] {
+  color: var(--muted) !important;
+}
+
+.dark [style*="background: #fff"],
+.dark [style*="background-color: #fff"],
+.dark [style*="background: rgb(255, 255, 255)"],
+.dark [style*="background-color: rgb(255, 255, 255)"] {
+  background-color: var(--surface) !important;
+}
+
+.dark [style*="background: #f8f6ff"],
+.dark [style*="background: rgb(248, 246, 255)"] {
+  background-color: #1a1040 !important;
+}
+
+.dark [style*="background: #ede9fe"],
+.dark [style*="background: rgb(237, 233, 254)"] {
+  background-color: #2a1f5e !important;
+}
+
+.dark [style*="background: #fffdf0"],
+.dark [style*="background: rgb(255, 253, 240)"] {
+  background-color: #1a1800 !important;
+}
+
+.dark [style*="background: #fff8e1"],
+.dark [style*="background: rgb(255, 248, 225)"] {
+  background-color: #1a1800 !important;
+}
+
+.dark [style*="background: #fff8f0"],
+.dark [style*="background: rgb(255, 248, 240)"] {
+  background-color: #1a1200 !important;
+}
+
+.dark [style*="background: #f0fdf4"],
+.dark [style*="background: rgb(240, 253, 244)"] {
+  background-color: #0a1a10 !important;
+}
+
+.dark [style*="background: #fef3c7"],
+.dark [style*="background: rgb(254, 243, 199)"] {
+  background-color: #2a2000 !important;
+}
+
+.dark [style*="background: #fff0f0"],
+.dark [style*="background: rgb(255, 240, 240)"] {
+  background-color: #2a0a0a !important;
+}
+
+.dark [style*="background: #eff6ff"],
+.dark [style*="background: rgb(239, 246, 255)"] {
+  background-color: #0a1a2a !important;
+}
+
+.dark [style*="background: #f0ebff"],
+.dark [style*="background: rgb(240, 235, 255)"] {
+  background-color: #1a1040 !important;
+}
+
+.dark [style*="background: #e8e0fc"],
+.dark [style*="background: rgb(232, 224, 252)"] {
+  background-color: #2a1f5e !important;
+}
+
+.dark [style*="background: #f8fafc"],
+.dark [style*="background: rgb(248, 250, 252)"] {
+  background-color: var(--surface) !important;
+}
+
+.dark [style*="background: #fafafa"],
+.dark [style*="background: rgb(250, 250, 250)"] {
+  background-color: var(--surface) !important;
+}
+
+.dark [style*="background: #fafcfe"],
+.dark [style*="background: rgb(250, 252, 254)"] {
+  background-color: var(--surface) !important;
+}
+
+.dark [style*="background: #f3f0ff"] {
+  background-color: #1a1040 !important;
+}
+
+.dark [style*="background: #fffbeb"],
+.dark [style*="background: rgb(255, 251, 235)"] {
+  background-color: #1a1800 !important;
+}
+
+.dark [style*="border: 1.5px solid #d0c4f0"],
+.dark [style*="border: 1.5px solid rgb(208, 196, 240)"] {
+  border-color: #3a2f6e !important;
+}
+
+.dark [style*="border: 1px solid #e0d8f8"],
+.dark [style*="border: 1px solid rgb(224, 216, 248)"] {
+  border-color: #3a2f6e !important;
+}
+
+.dark [style*="border: 1px solid #e5e7eb"],
+.dark [style*="border: 1px solid rgb(229, 231, 235)"] {
+  border-color: var(--border) !important;
+}
+
+.dark [style*="border: 1px solid #eee"],
+.dark [style*="border: 1px solid rgb(238, 238, 238)"] {
+  border-color: var(--border) !important;
+}
+
+.dark [style*="border: 1px solid #f0c040"],
+.dark [style*="border: 1px solid rgb(240, 192, 64)"] {
+  border-color: #8a6a10 !important;
+}
+
+.dark [style*="border: 1px solid #f5c6cb"] {
+  border-color: #5a2020 !important;
+}
+
+.dark [style*="border: 1px solid #bbf7d0"] {
+  border-color: #1a4a2a !important;
+}
+
+.dark [style*="border: 1px solid #f5ddb3"] {
+  border-color: #5a4010 !important;
+}
+
+.dark [style*="border: 1px solid #fecaca"] {
+  border-color: #5a2020 !important;
+}
+
+.dark [style*="border-bottom: 1px solid #eee"] {
+  border-color: var(--border2) !important;
+}
+
+.dark [style*="border-left: 4px solid #16a34a"] {
+  border-left-color: #22c55e !important;
+}
+
+.dark [style*="border-left: 4px solid #2563eb"] {
+  border-left-color: #3b82f6 !important;
+}
+
+.dark [style*="border-left: 4px solid #f59e0b"] {
+  border-left-color: #f59e0b !important;
+}
+
+.dark [style*="border-left: 4px solid #dc2626"] {
+  border-left-color: #ef4444 !important;
+}
+
+.dark [style*="border: 1px solid #bae6fd"] {
+  border-color: #0e4a6a !important;
+}
+
+.dark [style*="border: 1px solid #e9d5ff"] {
+  border-color: #3a2060 !important;
+}
+
+.dark [style*="border: 1px solid #e2e8f0"],
+.dark [style*="border: 1px solid rgb(226, 232, 240)"] {
+  border-color: var(--border) !important;
+}
+
+.dark [style*="border: 1px solid #dce8f5"],
+.dark [style*="border: 1px solid rgb(220, 232, 245)"] {
+  border-color: var(--border) !important;
+}
+
+.dark [style*="border: 1px solid #f1f5f9"],
+.dark [style*="border: 1px solid rgb(241, 245, 249)"] {
+  border-color: var(--border2) !important;
+}
+
+.dark [style*="border: 1px solid #ccd8e8"] {
+  border-color: var(--border) !important;
+}
+
+.dark [style*="border: 1px solid #ccd"] {
+  border-color: var(--border) !important;
+}
+
+.dark [style*="border: 1.5px solid #6c3fc5"] {
+  border-color: #8b6fe0 !important;
+}
+
+.dark [style*="background: #6c3fc5"],
+.dark [style*="background: rgb(108, 63, 197)"] {
+  background-color: #8b6fe0 !important;
+}
+
+.dark [style*="color: #6c3fc5"],
+.dark [style*="color: rgb(108, 63, 197)"] {
+  color: #a78bfa !important;
+}
+
+.dark [style*="color: #7c3aed"],
+.dark [style*="color: rgb(124, 58, 237)"] {
+  color: #a78bfa !important;
+}
+
+.dark [style*="color: #5b21b6"],
+.dark [style*="color: rgb(91, 33, 182)"] {
+  color: #a78bfa !important;
+}
+
+.dark [style*="color: #0369a1"],
+.dark [style*="color: rgb(3, 105, 161)"] {
+  color: #38bdf8 !important;
+}
+
+.dark [style*="color: #0f172a"],
+.dark [style*="color: rgb(15, 23, 42)"] {
+  color: var(--text) !important;
+}
+
+.dark [style*="color: #1e293b"],
+.dark [style*="color: rgb(30, 41, 59)"] {
+  color: var(--text) !important;
+}
+
+.dark [style*="color: #475569"],
+.dark [style*="color: rgb(71, 85, 105)"] {
+  color: var(--muted) !important;
+}
+
+.dark [style*="color: #64748b"],
+.dark [style*="color: rgb(100, 116, 139)"] {
+  color: var(--muted) !important;
+}
+
+.dark [style*="color: #94a3b8"],
+.dark [style*="color: rgb(148, 163, 184)"] {
+  color: var(--muted) !important;
+}
+
+.dark [style*="color: #15803d"],
+.dark [style*="color: rgb(21, 128, 61)"] {
+  color: #4ade80 !important;
+}
+
+.dark [style*="color: #b45309"],
+.dark [style*="color: rgb(180, 83, 9)"] {
+  color: #fbbf24 !important;
+}
+
+.dark [style*="color: #1e40af"],
+.dark [style*="color: rgb(30, 64, 175)"] {
+  color: #60a5fa !important;
+}
+
+.dark [style*="color: #854d0e"],
+.dark [style*="color: rgb(133, 77, 14)"] {
+  color: #fbbf24 !important;
+}
+
+.dark [style*="color: #92400e"],
+.dark [style*="color: rgb(146, 64, 14)"] {
+  color: #fbbf24 !important;
+}
+
+.dark [style*="color: #c0392b"],
+.dark [style*="color: rgb(192, 57, 43)"] {
+  color: #f87171 !important;
+}
+
+.dark [style*="color: #27ae60"],
+.dark [style*="color: rgb(39, 174, 96)"] {
+  color: #4ade80 !important;
+}
+
+.dark [style*="color: #e67e22"],
+.dark [style*="color: rgb(230, 126, 34)"] {
+  color: #fb923c !important;
+}
+
+.dark [style*="color: #92400e"] {
+  color: #fbbf24 !important;
+}
+
+.dark [style*="color: #166534"] {
+  color: #4ade80 !important;
+}
+
+.dark [style*="background: #f0f6fc"] {
+  background-color: #0a1a2a !important;
+}
+
+.dark [style*="background: #f5f9fe"] {
+  background-color: var(--border2) !important;
+}
+
+.dark [style*="background: #eaf2fb"] {
+  background-color: var(--border2) !important;
+}
+
+.dark [style*="background: #e8f0fb"] {
+  background-color: var(--border2) !important;
+}
+
+.dark [style*="background: #f2f7fc"] {
+  background-color: var(--border2) !important;
+}
+
+.dark [style*="background: #f8fbfe"] {
+  background-color: var(--border2) !important;
+}
+
+.dark [style*="background: #f0f4f8"] {
+  background-color: var(--border2) !important;
+}
+
+.dark [style*="background: #f1f5f9"] {
+  background-color: var(--border2) !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────── */
+/* ─── Dark Mode: Protein Library & Workspace Cards ───────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────── */
+
+.dark .workspace-card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.dark .workspace-card h4 {
+  color: var(--accent) !important;
+}
+
+.dark .workspace-card p {
+  color: var(--muted) !important;
+}
+
+.dark .workspace-card strong {
+  color: var(--text) !important;
+}
+
+/* Workspace background glass panels */
+.dark [style*="background: rgba(255, 255, 255, 0.4)"],
+.dark [style*="background: rgba(255,255,255,0.4)"] {
+  background-color: rgba(17, 24, 39, 0.6) !important;
+}
+
+.dark [style*="background: rgba(255, 255, 255, 0.45)"],
+.dark [style*="background: rgba(255,255,255,0.45)"] {
+  background-color: rgba(17, 24, 39, 0.6) !important;
+}
+
+.dark [style*="background: rgba(255,255,255,0.8)"] {
+  background-color: rgba(17, 24, 39, 0.7) !important;
+}
+
+.dark [style*="border-bottom: 2px solid rgba(2, 132, 199, 0.15)"] {
+  border-bottom-color: rgba(20, 184, 166, 0.2) !important;
+}
+
+.dark [style*="border-top: 1px solid rgba(2, 132, 199, 0.1)"] {
+  border-top-color: rgba(20, 184, 166, 0.15) !important;
+}
+
+/* ADMET table row alternating colors */
+.dark [style*="background: #fafafa"],
+.dark [style*="background: rgb(250, 250, 250)"] {
+  background-color: var(--border2) !important;
+}
+
+/* ADMET category headers */
+.dark [style*="background: #6c3fc5"][style*="color: #fff"] {
+  background-color: #7c5ce0 !important;
+  color: #fff !important;
+}
+
+/* ADMET th */
+.dark [style*="background: #6c3fc5"][style*="padding"] {
+  background-color: #7c5ce0 !important;
+  color: #fff !important;
+}
+
+/* ADMET Textarea dark/light mode font and background overrides */
+.admet-textarea {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+.dark .admet-textarea {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border-color: #4b5563 !important;
+}

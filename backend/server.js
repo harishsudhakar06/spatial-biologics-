@@ -3,6 +3,7 @@ const cors = require("cors");
 const axios = require("axios");
 const https = require("https");
 const session = require("express-session");
+const { MongoStore } = require("connect-mongo");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const fs = require("fs");
@@ -20,7 +21,17 @@ const app = express();
 app.set("trust proxy", true);
 const PORT = 5000;
 
-/* ========================= DB SETUP ========================= */
+/* ========================= MONGODB SETUP ========================= */
+const { connectDB, isMongoConnected } = require("./config/db");
+const User = require("./models/User");
+const OTP = require("./models/OTP");
+const Workspace = require("./models/Workspace");
+
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/chemvault";
+
+connectDB();
+
+/* ========================= DB HELPERS (MongoDB + JSON fallback) ========================= */
 const DB_FILE = path.join(__dirname, "db.json");
 
 function initDB() {
@@ -39,15 +50,26 @@ function writeDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-function getUserByEmail(email) {
+async function getUserByEmail(email) {
+  if (isMongoConnected()) {
+    return await User.findOne({ email }).lean();
+  }
   return readDB().users.find(u => u.email === email) || null;
 }
 
-function getUserById(id) {
+async function getUserById(id) {
+  if (isMongoConnected()) {
+    return await User.findById(id).lean();
+  }
   return readDB().users.find(u => u.id === id) || null;
 }
 
-function createUser({ username, email, password, phone = "", designation = "", affiliation = "" }) {
+async function createUser({ username, email, password, phone = "", designation = "", affiliation = "" }) {
+  if (isMongoConnected()) {
+    const newUser = new User({ username, email, password, phone, designation, affiliation });
+    await newUser.save();
+    return { id: newUser._id.toString(), username: newUser.username, email: newUser.email };
+  }
   const db = readDB();
   const newUser = {
     id: Date.now().toString(), username, email, password,
@@ -58,7 +80,11 @@ function createUser({ username, email, password, phone = "", designation = "", a
   return newUser;
 }
 
-function updateUserPassword(email, hashedPassword) {
+async function updateUserPassword(email, hashedPassword) {
+  if (isMongoConnected()) {
+    const result = await User.findOneAndUpdate({ email }, { password: hashedPassword });
+    return !!result;
+  }
   const db = readDB();
   const idx = db.users.findIndex(u => u.email === email);
   if (idx === -1) return false;
@@ -67,35 +93,94 @@ function updateUserPassword(email, hashedPassword) {
   return true;
 }
 
-function saveOTP(email, otp) {
+async function saveOTP(email, otp) {
+  if (isMongoConnected()) {
+    await OTP.deleteMany({ email });
+    await OTP.create({ email, otp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) });
+    return;
+  }
   const db = readDB();
   db.otps = db.otps.filter(o => o.email !== email);
   db.otps.push({ email, otp, expiresAt: Date.now() + 5 * 60 * 1000 });
   writeDB(db);
 }
 
-function getOTP(email) {
+async function getOTP(email) {
+  if (isMongoConnected()) {
+    return await OTP.findOne({ email }).lean();
+  }
   return readDB().otps.find(o => o.email === email) || null;
 }
 
-function deleteOTP(email) {
+async function deleteOTP(email) {
+  if (isMongoConnected()) {
+    await OTP.deleteMany({ email });
+    return;
+  }
   const db = readDB();
   db.otps = db.otps.filter(o => o.email !== email);
   writeDB(db);
 }
 
-function cleanExpiredOTPs() {
+async function cleanExpiredOTPs() {
+  if (isMongoConnected()) {
+    await OTP.deleteMany({ expiresAt: { $lt: new Date() } });
+    return;
+  }
   const db = readDB();
   db.otps = db.otps.filter(o => o.expiresAt > Date.now());
   writeDB(db);
 }
 
+async function getAllUsers() {
+  if (isMongoConnected()) {
+    return await User.find().lean();
+  }
+  return readDB().users || [];
+}
+
+async function getWorkspace(userId) {
+  if (isMongoConnected()) {
+    const ws = await Workspace.findOne({ userId }).lean();
+    return ws ? { activeProjectId: ws.activeProjectId, projects: ws.projects } : null;
+  }
+  const db = readDB();
+  if (!db.workspaces) db.workspaces = {};
+  return db.workspaces[userId] || null;
+}
+
+async function saveWorkspace(userId, workspace) {
+  if (isMongoConnected()) {
+    await Workspace.findOneAndUpdate(
+      { userId },
+      { $set: { activeProjectId: workspace.activeProjectId, projects: workspace.projects } },
+      { upsert: true }
+    );
+    return;
+  }
+  const db = readDB();
+  if (!db.workspaces) db.workspaces = {};
+  db.workspaces[userId] = workspace;
+  writeDB(db);
+}
+
+async function getAllWorkspaces() {
+  if (isMongoConnected()) {
+    const all = await Workspace.find().lean();
+    const map = {};
+    all.forEach(w => { map[w.userId] = { activeProjectId: w.activeProjectId, projects: w.projects }; });
+    return map;
+  }
+  const db = readDB();
+  return db.workspaces || {};
+}
+
 initDB();
 
 /* ========================= EXCEL HELPER ========================= */
-function buildExcelBuffer() {
-  const db = readDB();
-  const safeUsers = db.users.map(({ password, ...rest }) => rest);
+async function buildExcelBuffer() {
+  const users = await getAllUsers();
+  const safeUsers = users.map(({ password, ...rest }) => rest);
   const wsData = [
     ["#", "Name", "Email", "Phone", "Designation", "Affiliation", "Registered On"],
     ...safeUsers.map((u, i) => [
@@ -129,19 +214,25 @@ const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || "587");
 
 let transporterConfig;
 
-if (EMAIL_HOST) {
+if (EMAIL_HOST && EMAIL_HOST !== "smtp.gmail.com") {
   transporterConfig = {
     host: EMAIL_HOST,
     port: EMAIL_PORT,
     secure: false,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
     tls: { rejectUnauthorized: false },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   };
   console.log(`📧 Email: custom SMTP ${EMAIL_HOST}:${EMAIL_PORT}`);
-} else if (EMAIL_USER.includes("@gmail.com")) {
+} else if (EMAIL_USER.includes("@gmail.com") || EMAIL_HOST === "smtp.gmail.com") {
   transporterConfig = {
     service: "gmail",
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   };
   console.log(`📧 Email: Gmail SMTP`);
 } else {
@@ -152,6 +243,9 @@ if (EMAIL_HOST) {
     secure: false,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
     tls: { rejectUnauthorized: false },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   };
   console.log(`📧 Email: auto SMTP mail.${domain}:587`);
 }
@@ -163,7 +257,8 @@ let isTransporterReady = false;
 transporter.verify((err, success) => {
   if (err) {
     console.error("❌ Email transporter error:", err.message);
-    console.log("   OTP will still be printed in terminal as fallback");
+    console.log("   Error code:", err.code);
+    console.log("   OTP will be printed in terminal AND shown in the UI as fallback");
     isTransporterReady = false;
   } else {
     console.log("✅ Email transporter ready — OTP emails will be sent");
@@ -173,7 +268,7 @@ transporter.verify((err, success) => {
 
 async function sendOTPEmail(toEmail, otp) {
   if (!isTransporterReady) {
-    console.log(`⚠️ SMTP transporter offline. Fallback to console OTP printing.`);
+    console.log(`⚠️ SMTP transporter offline. Fallback: OTP shown in UI.`);
     return false;
   }
   try {
@@ -232,17 +327,43 @@ app.use(cors({ origin: corsOrigins, credentials: true }));
 
 // Dynamic session cookie settings for secure/production environments
 const isProd = process.env.NODE_ENV === "production";
-app.use(session({
-  secret: "chemvault_secret_key",
+
+let sessionConfig = {
+  secret: process.env.SESSION_SECRET || "chemvault_secret_key",
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: isProd,
     httpOnly: true,
     sameSite: isProd ? (process.env.SESSION_SAME_SITE || "none") : "lax",
-    maxAge: 86400000
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   },
-}));
+};
+
+// Use MongoStore only if MONGO_URI is explicitly set (e.g., production with MongoDB available)
+// In local dev without MongoDB, MemoryStore is fine since user data persists in db.json
+if (process.env.MONGO_URI) {
+  try {
+    const store = MongoStore.create({
+      mongoUrl: MONGO_URI,
+      collectionName: "sessions",
+      ttl: 30 * 24 * 60 * 60,
+      autoRemove: "native",
+      mongoOptions: { serverSelectionTimeoutMS: 3000 },
+    });
+    store.on("error", (err) => {
+      console.warn("⚠️ MongoStore session error:", err.message);
+    });
+    sessionConfig.store = store;
+    console.log("✅ Session store: MongoDB (connect-mongo)");
+  } catch (err) {
+    console.warn("⚠️ MongoStore init failed, using MemoryStore:", err.message);
+  }
+} else {
+  console.log("⚠️ No MONGO_URI set — sessions stored in memory (resets on restart)");
+}
+
+app.use(session(sessionConfig));
 
 /* ========================= CONTACT ROUTE ========================= */
 try {
@@ -308,18 +429,18 @@ app.post("/api/register", async (req, res) => {
     if (!username || !email || !password)
       return res.status(400).json({ error: "Name, email and password are required" });
 
-    if (getUserByEmail(email))
+    if (await getUserByEmail(email))
       return res.status(400).json({ error: "An account with this email already exists" });
 
     const hashed  = await bcrypt.hash(password, 10);
-    const newUser = createUser({ username, email, password: hashed, phone, designation, affiliation });
+    const newUser = await createUser({ username, email, password: hashed, phone, designation, affiliation });
 
     req.session.userId = newUser.id;
 
     // ── Notify admin of new registration with Excel ────────────────
     if (isTransporterReady) {
       try {
-        const { buffer: excelBuffer, total } = buildExcelBuffer();
+        const { buffer: excelBuffer, total } = await buildExcelBuffer();
         const dateStr = new Date().toLocaleString("en-IN");
         transporter.sendMail({
           from: `"ChemVault" <${EMAIL_USER}>`,
@@ -380,18 +501,18 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = getUserByEmail(email);
+    const user = await getUserByEmail(email);
     if (!user) return res.status(401).json({ error: "Invalid email or password" });
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: "Invalid email or password" });
 
-    req.session.userId = user.id;
+    req.session.userId = user.id || user._id?.toString();
 
     // ── Notify admin on login with Excel ──────────────────────────
     if (isTransporterReady) {
       try {
-        const { buffer: excelBuffer, total } = buildExcelBuffer();
+        const { buffer: excelBuffer, total } = await buildExcelBuffer();
         const dateStr = new Date().toLocaleString("en-IN");
         transporter.sendMail({
           from: `"ChemVault" <${EMAIL_USER}>`,
@@ -439,7 +560,7 @@ app.post("/api/login", async (req, res) => {
     }
     // ── End login notification ─────────────────────────────────────
 
-    res.json({ success: true, user: { id: user.id, username: user.username, email: user.email } });
+    res.json({ success: true, user: { id: user.id || user._id?.toString(), username: user.username, email: user.email } });
   } catch (err) {
     console.error("Login error:", err.message);
     res.status(500).json({ error: "Login failed" });
@@ -451,16 +572,16 @@ app.post("/api/logout", (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/api/me", (req, res) => {
+app.get("/api/me", async (req, res) => {
   try {
     if (!req.session?.userId)
       return res.status(401).json({ error: "Not logged in" });
-    const user = getUserById(req.session.userId);
+    const user = await getUserById(req.session.userId);
     if (!user) {
       req.session.destroy();
       return res.status(401).json({ error: "User not found" });
     }
-    res.json({ id: user.id, username: user.username, email: user.email });
+    res.json({ id: user.id || user._id?.toString(), username: user.username, email: user.email });
   } catch (err) {
     res.status(401).json({ error: "Not logged in" });
   }
@@ -472,12 +593,12 @@ app.post("/api/forgot-password/send-otp", async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required" });
 
-    const user = getUserByEmail(email);
+    const user = await getUserByEmail(email);
     if (!user)
       return res.status(404).json({ error: "No account found with this email address" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    saveOTP(email, otp);
+    await saveOTP(email, otp);
 
     const sent = await sendOTPEmail(email, otp);
 
@@ -506,12 +627,13 @@ app.post("/api/forgot-password/verify-otp", async (req, res) => {
     if (newPassword.length < 6)
       return res.status(400).json({ error: "Password must be at least 6 characters" });
 
-    const record = getOTP(email);
+    const record = await getOTP(email);
     if (!record)
       return res.status(400).json({ error: "No OTP found. Please request a new one." });
 
-    if (Date.now() > record.expiresAt) {
-      deleteOTP(email);
+    const expiresAt = record.expiresAt instanceof Date ? record.expiresAt.getTime() : record.expiresAt;
+    if (Date.now() > expiresAt) {
+      await deleteOTP(email);
       return res.status(400).json({ error: "OTP has expired. Please request a new one." });
     }
 
@@ -519,11 +641,11 @@ app.post("/api/forgot-password/verify-otp", async (req, res) => {
       return res.status(400).json({ error: "Incorrect OTP. Please try again." });
 
     const hashed  = await bcrypt.hash(newPassword, 10);
-    const updated = updateUserPassword(email, hashed);
+    const updated = await updateUserPassword(email, hashed);
     if (!updated)
       return res.status(404).json({ error: "User not found" });
 
-    deleteOTP(email);
+    await deleteOTP(email);
     res.json({ success: true, message: "Password updated successfully! Please sign in." });
   } catch (err) {
     console.error("Verify OTP error:", err.message);
@@ -802,15 +924,13 @@ function findNewItems(oldProjects, newProjects) {
   return newItems;
 }
 
-app.get("/api/workspace", (req, res) => {
+app.get("/api/workspace", async (req, res) => {
   try {
     if (!req.session?.userId) {
       return res.status(401).json({ error: "Not logged in" });
     }
-    const db = readDB();
-    if (!db.workspaces) db.workspaces = {};
     
-    const workspace = db.workspaces[req.session.userId] || {
+    const workspace = await getWorkspace(req.session.userId) || {
       activeProjectId: "SPB001",
       projects: {
         "SPB001": {
@@ -840,10 +960,7 @@ app.post("/api/workspace", async (req, res) => {
       return res.status(400).json({ error: "Invalid workspace data" });
     }
     
-    const db = readDB();
-    if (!db.workspaces) db.workspaces = {};
-    
-    const oldWorkspace = db.workspaces[req.session.userId] || { projects: {} };
+    const oldWorkspace = await getWorkspace(req.session.userId) || { projects: {} };
     
     // Find new items added to notify customer support and set timestamps
     const newItems = findNewItems(oldWorkspace.projects, newWorkspace.projects);
@@ -877,8 +994,7 @@ app.post("/api/workspace", async (req, res) => {
       }
     }
     
-    db.workspaces[req.session.userId] = newWorkspace;
-    writeDB(db);
+    await saveWorkspace(req.session.userId, newWorkspace);
     
     // Notify customer support if new items added
     const totalAddedCount = newItems.downloadedLigands.length +
@@ -890,7 +1006,7 @@ app.post("/api/workspace", async (req, res) => {
       const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
       const host = req.get('host') || 'localhost:5000';
       const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
-      const user = getUserById(req.session.userId);
+      const user = await getUserById(req.session.userId);
       const username = user ? user.username : "Unknown User";
       const email = user ? user.email : "N/A";
       
@@ -986,13 +1102,10 @@ app.get("/api/admin/clear-workspace", async (req, res) => {
       return res.status(400).send("<h1>Error: Missing userId parameter</h1>");
     }
 
-    const db = readDB();
-    if (!db.workspaces) db.workspaces = {};
-
-    const userObj = getUserById(userId);
+    const userObj = await getUserById(userId);
     const username = userObj ? userObj.username : "Unknown User";
 
-    db.workspaces[userId] = {
+    const emptyWorkspace = {
       activeProjectId: "SPB001",
       projects: {
         "SPB001": {
@@ -1003,7 +1116,7 @@ app.get("/api/admin/clear-workspace", async (req, res) => {
         }
       }
     };
-    writeDB(db);
+    await saveWorkspace(userId, emptyWorkspace);
 
     res.send(`
       <div style="font-family:Arial,sans-serif;text-align:center;padding:50px;max-width:500px;margin:50px auto;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.05)">
@@ -1025,15 +1138,16 @@ app.get("/api/admin/clear-workspace", async (req, res) => {
 
 async function checkWorkspaceDataRetention() {
   console.log("⏰ Running data retention and warning check...");
-  const db = readDB();
-  if (!db.workspaces) return;
+  const allWorkspaces = await getAllWorkspaces();
+  if (!allWorkspaces || Object.keys(allWorkspaces).length === 0) return;
 
-  let hasChanges = false;
   const now = new Date();
 
-  for (const [userId, workspace] of Object.entries(db.workspaces)) {
-    const user = getUserById(userId);
+  for (const [userId, workspace] of Object.entries(allWorkspaces)) {
+    const user = await getUserById(userId);
     if (!user) continue;
+
+    let hasChanges = false;
 
     for (const [projId, project] of Object.entries(workspace.projects || {})) {
       const fields = ["downloadedLigands", "ligandFiles", "downloadedProteins", "dockingJobs"];
@@ -1119,10 +1233,10 @@ async function checkWorkspaceDataRetention() {
         }
       }
     }
-  }
 
-  if (hasChanges) {
-    writeDB(db);
+    if (hasChanges) {
+      await saveWorkspace(userId, workspace);
+    }
   }
 }
 

@@ -545,7 +545,7 @@ export default function WorkspaceView() {
                 {filteredProteins.filter(p => p.format === "pdb").map((protein, idx) => {
                   const pKey = protein.accession + "_" + protein.format;
                   return (
-                    <div key={pKey} className="workspace-card animate-fade-in-up" style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between", animationDelay: `${idx * 0.04}s` }}>
+                    <div key={pKey} className="workspace-card" style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                           <span style={{
@@ -566,9 +566,9 @@ export default function WorkspaceView() {
                         </h4>
                         
                         <div style={{ fontSize: "12px", color: "#475569" }}>
-                          <p style={{ margin: "4px 0" }}>Structure ID: <strong style={{ color: "#0f172a" }}>{protein.accession}</strong></p>
-                          <p style={{ margin: "4px 0" }}>Classification: <strong style={{ color: "#0f172a" }}>{protein.gene || "N/A"}</strong></p>
-                          <p style={{ margin: "4px 0" }}>Organism: <strong style={{ color: "#0f172a" }}>{protein.organism || "N/A"}</strong></p>
+                          <p style={{ margin: "4px 0" }}>Structure ID: <strong>{protein.accession}</strong></p>
+                          <p style={{ margin: "4px 0" }}>Classification: <strong>{protein.gene || "N/A"}</strong></p>
+                          <p style={{ margin: "4px 0" }}>Organism: <strong>{protein.organism || "N/A"}</strong></p>
                         </div>
                       </div>
 
@@ -616,7 +616,7 @@ export default function WorkspaceView() {
                 {filteredProteins.filter(p => p.format !== "pdb").map((protein, idx) => {
                   const pKey = protein.accession + "_" + protein.format;
                   return (
-                    <div key={pKey} className="workspace-card animate-fade-in-up" style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between", animationDelay: `${idx * 0.04}s` }}>
+                    <div key={pKey} className="workspace-card" style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                           <span style={{
@@ -637,9 +637,9 @@ export default function WorkspaceView() {
                         </h4>
                         
                         <div style={{ fontSize: "12px", color: "#475569" }}>
-                          <p style={{ margin: "4px 0" }}>Accession: <strong style={{ color: "#0f172a" }}>{protein.accession}</strong></p>
-                          <p style={{ margin: "4px 0" }}>Gene: <strong style={{ color: "#0f172a" }}>{protein.gene || "N/A"}</strong></p>
-                          <p style={{ margin: "4px 0" }}>Organism: <strong style={{ color: "#0f172a" }}>{protein.organism || "N/A"}</strong></p>
+                          <p style={{ margin: "4px 0" }}>Accession: <strong>{protein.accession}</strong></p>
+                          <p style={{ margin: "4px 0" }}>Gene: <strong>{protein.gene || "N/A"}</strong></p>
+                          <p style={{ margin: "4px 0" }}>Organism: <strong>{protein.organism || "N/A"}</strong></p>
                         </div>
                       </div>
 

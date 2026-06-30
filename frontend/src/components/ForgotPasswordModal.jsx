@@ -17,6 +17,7 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [timer, setTimer] = useState(0);
   const [canResend, setCanResend] = useState(false);
+  const [devOtp, setDevOtp] = useState("");
 
   // OTP Timer - 30 seconds
   useEffect(() => {
@@ -46,8 +47,14 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
 
     setLoading(true);
     try {
-      await sendForgotPasswordOTP(email);
-      setMessage("OTP sent to your Gmail!");
+      const result = await sendForgotPasswordOTP(email);
+      if (result.devOtp) {
+        setDevOtp(result.devOtp);
+        setMessage(`OTP sent. (Dev fallback OTP: ${result.devOtp})`);
+      } else {
+        setDevOtp("");
+        setMessage("OTP sent to your Gmail!");
+      }
       setTimer(30);
       setCanResend(false);
       setStep("otp");
@@ -62,8 +69,14 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
     setError("");
     setLoading(true);
     try {
-      await sendForgotPasswordOTP(email);
-      setMessage("OTP resent to your Gmail!");
+      const result = await sendForgotPasswordOTP(email);
+      if (result.devOtp) {
+        setDevOtp(result.devOtp);
+        setMessage(`OTP resent. (Dev fallback OTP: ${result.devOtp})`);
+      } else {
+        setDevOtp("");
+        setMessage("OTP resent to your Gmail!");
+      }
       setTimer(30);
       setCanResend(false);
       setOtp("");
@@ -192,6 +205,13 @@ export default function ForgotPasswordModal({ onClose, onBackToLogin }) {
             <div>
               <p className="text-xs text-gray-600 mb-3">Email: <strong>{email}</strong></p>
               <p className="text-xs text-gray-500">A 6-digit OTP has been sent to your Gmail</p>
+              {devOtp && (
+                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-300 rounded-md">
+                  <p className="text-xs font-bold text-yellow-700">Dev Fallback OTP:</p>
+                  <p className="text-lg font-mono font-bold text-yellow-800 tracking-widest text-center mt-1">{devOtp}</p>
+                  <p className="text-xs text-yellow-600 mt-1">Email delivery failed. Use this OTP to continue.</p>
+                </div>
+              )}
             </div>
 
             <div>

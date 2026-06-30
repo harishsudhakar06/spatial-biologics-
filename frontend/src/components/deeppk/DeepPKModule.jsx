@@ -829,6 +829,7 @@ export default function DeepPKModule() {
       {/* ── SMILES textarea ── */}
       <div style={{ position: "relative", marginBottom: 10 }}>
         <textarea
+          className="admet-textarea"
           value={smilesText}
           onChange={e => setSmilesText(e.target.value)}
           placeholder={"Enter one or multiple SMILES (one per line, or comma-separated):\nCC(=O)Oc1ccccc1C(=O)O\nCN1CCC[C@H]1c2cccnc2\nc1ccc2c(c1)cc1ccc3cccc4ccc2c1c34"}

@@ -2,35 +2,44 @@ const express = require("express");
 const nodemailer = require("nodemailer");
 const router = express.Router();
 
-// Use same SMTP config as server.js (reads from .env)
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-const EMAIL_HOST = process.env.EMAIL_HOST;
+// Use same SMTP config as server.js (reads from .env or default fallbacks)
+const EMAIL_USER = process.env.EMAIL_USER || "customersupport@spatialbiologics.com";
+const EMAIL_PASS = process.env.EMAIL_PASS || "bakhdddbaajnfvbk";
+const EMAIL_HOST = process.env.EMAIL_HOST || (EMAIL_USER.includes("spatialbiologics.com") ? "smtp.gmail.com" : undefined);
 const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || "587");
 
 let transporterConfig;
 
-if (EMAIL_HOST) {
+if (EMAIL_HOST && EMAIL_HOST !== "smtp.gmail.com") {
   transporterConfig = {
     host: EMAIL_HOST,
     port: EMAIL_PORT,
     secure: false,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
     tls: { rejectUnauthorized: false },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   };
-} else if (EMAIL_USER?.includes("@gmail.com")) {
+} else if (EMAIL_USER.includes("@gmail.com") || EMAIL_HOST === "smtp.gmail.com") {
   transporterConfig = {
     service: "gmail",
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   };
 } else {
-  const domain = EMAIL_USER?.split("@")[1];
+  const domain = EMAIL_USER.split("@")[1];
   transporterConfig = {
     host: `mail.${domain}`,
     port: 587,
     secure: false,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
     tls: { rejectUnauthorized: false },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   };
 }
 
