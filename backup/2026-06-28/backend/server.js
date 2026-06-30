@@ -15,7 +15,7 @@ const { spawn } = require("child_process");
 
 require("dotenv").config();
 
-// dns.setDefaultResultOrder("ipv4first");
+dns.setDefaultResultOrder("ipv4first");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -147,15 +147,13 @@ if (EMAIL_HOST && EMAIL_HOST !== "smtp.gmail.com") {
   console.log(`📧 Email: custom SMTP ${EMAIL_HOST}:${EMAIL_PORT}`);
 } else if (EMAIL_USER.includes("@gmail.com") || EMAIL_HOST === "smtp.gmail.com") {
   transporterConfig = {
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    service: "gmail",
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
     connectionTimeout: 10000,
     greetingTimeout: 5000,
     socketTimeout: 10000,
   };
-  console.log(`📧 Email: Gmail SMTP (explicit IPv4, port 465)`);
+  console.log(`📧 Email: Gmail SMTP`);
 } else {
   const domain = EMAIL_USER.split("@")[1];
   transporterConfig = {
@@ -172,7 +170,6 @@ if (EMAIL_HOST && EMAIL_HOST !== "smtp.gmail.com") {
 }
 
 const transporter = nodemailer.createTransport(transporterConfig);
-console.log("[DEBUG-EMAIL] Transporter config:", JSON.stringify({ service: transporterConfig.service, host: transporterConfig.host, port: transporterConfig.port, secure: transporterConfig.secure, authUser: transporterConfig.auth?.user }, null, 2));
 
 let isTransporterReady = false;
 
@@ -189,9 +186,8 @@ transporter.verify((err, success) => {
 });
 
 async function sendOTPEmail(toEmail, otp) {
-  console.log("[DEBUG-EMAIL] Attempting to send OTP email to:", toEmail);
   if (!isTransporterReady) {
-    console.log(`[DEBUG-EMAIL] SMTP transporter offline. Fallback: OTP shown in UI.`);
+    console.log(`⚠️ SMTP transporter offline. Fallback: OTP shown in UI.`);
     return false;
   }
   try {
@@ -224,7 +220,7 @@ async function sendOTPEmail(toEmail, otp) {
     console.log(`✅ OTP email sent to ${toEmail}`);
     return true;
   } catch (err) {
-    console.error("[DEBUG-EMAIL] Full OTP email error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    console.error("❌ Email send failed:", err.message);
     return false;
   }
 }
@@ -249,9 +245,8 @@ function validatePassword(password) {
 
 /* ========================= WELCOME EMAIL ========================= */
 async function sendWelcomeEmail(user) {
-  console.log("[DEBUG-EMAIL] Attempting to send welcome email to:", user.email);
   if (!isTransporterReady) {
-    console.log(`[DEBUG-EMAIL] SMTP transporter offline. Welcome email not sent to ${user.email}`);
+    console.log(`⚠️ SMTP transporter offline. Welcome email not sent to ${user.email}`);
     return false;
   }
   try {
@@ -301,7 +296,7 @@ async function sendWelcomeEmail(user) {
     console.log(`✅ Welcome email sent to ${user.email}`);
     return true;
   } catch (err) {
-    console.error("[DEBUG-EMAIL] Full welcome email error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    console.error("❌ Welcome email failed:", err.message);
     return false;
   }
 }
@@ -514,7 +509,6 @@ app.post("/api/login", async (req, res) => {
     if (!match) return res.status(401).json({ error: "Invalid email or password" });
 
     req.session.userId = user._id.toString();
-    console.log("[DEBUG-AUTH] Session set after login - userId:", req.session.userId, "sessionID:", req.sessionID);
 
     // ── Notify admin on login with Excel ──────────────────────────
     if (isTransporterReady) {
@@ -581,7 +575,6 @@ app.post("/api/logout", (req, res) => {
 
 app.get("/api/me", async (req, res) => {
   try {
-    console.log("[DEBUG-AUTH] /api/me called - sessionID:", req.sessionID, "userId:", req.session?.userId, "cookie:", req.headers.cookie);
     if (!req.session?.userId)
       return res.status(401).json({ error: "Not logged in" });
     const user = await getUserById(req.session.userId);
@@ -616,7 +609,8 @@ app.post("/api/forgot-password/send-otp", async (req, res) => {
       console.log(`[DEV] OTP for ${email}: ${otp}`);
       res.json({
         success: true,
-        message: "OTP sent to your email!"
+        message: `OTP sent. If email not received, check VS terminal. (Dev OTP: ${otp})`,
+        devOtp: otp
       });
     }
   } catch (err) {
