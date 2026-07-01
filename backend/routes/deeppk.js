@@ -181,6 +181,11 @@ function parseMolecule(mol) {
 }
 
 router.get("/results", async (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
   try {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ error: "job_id required" });
