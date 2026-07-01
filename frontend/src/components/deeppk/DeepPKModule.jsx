@@ -670,11 +670,18 @@ export default function DeepPKModule() {
     const maxAttempts = 100;
     while (attempts < maxAttempts) {
       if (abortRef.current) break;
+      const elapsedSec = attempts * 3;
       const simulatedDone = Math.min(attempts * Math.ceil(list.length / 15), list.length - 1);
+      let statusMsg;
+      if (elapsedSec < 300) {
+        statusMsg = `Analyzing on DeepPK server... (elapsed: ${elapsedSec}s)`;
+      } else {
+        statusMsg = `DeepPK server queue is currently busy. Your job is queued — results will appear when ready. You can leave this tab open and wait, or stop and try again later when queue is shorter.`;
+      }
       setProgress({
         done: simulatedDone,
         total: list.length,
-        current: `Analyzing batch on server... (elapsed: ${attempts * 3}s)`
+        current: statusMsg
       });
       
       await new Promise(r => setTimeout(r, 3000));
@@ -706,12 +713,7 @@ export default function DeepPKModule() {
     }
 
     if (!jobResults) {
-      const elapsed = attempts * 3;
-      if (elapsed > 300) {
-        setError("DeepPK is taking longer than expected. Results will appear when ready — you can wait or try again later.");
-      } else {
-        setError("Timed out waiting for prediction results.");
-      }
+      setError("DeepPK server queue is busy. Your job is still processing — try checking back in a few minutes, or submit again later.");
       setRunning(false);
       return;
     }

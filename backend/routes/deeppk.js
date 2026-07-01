@@ -7,142 +7,14 @@ const BASE = "https://biosig.lab.uq.edu.au/deeppk";
 
 const jobStore = new Map();
 const JOB_TTL_MS = 30 * 60 * 1000;
-const MAX_POLL_TIME_MS = 10 * 60 * 1000;
-const POLL_INTERVAL_MS = 5000;
 
 function cleanupJobStore() {
   const now = Date.now();
   for (const [jobId, entry] of jobStore.entries()) {
     if (now - entry.createdAt > JOB_TTL_MS) {
-      if (entry.pollTimer) {
-        clearTimeout(entry.pollTimer);
-      }
       jobStore.delete(jobId);
     }
   }
-}
-
-function stopPolling(jobId) {
-  const entry = jobStore.get(jobId);
-  if (entry && entry.pollTimer) {
-    clearTimeout(entry.pollTimer);
-    entry.pollTimer = null;
-  }
-}
-
-function startBackgroundPolling(jobId) {
-  const entry = jobStore.get(jobId);
-  if (!entry) return;
-
-  let attemptCount = 0;
-
-  const pollDeepPK = async () => {
-    const currentEntry = jobStore.get(jobId);
-    if (!currentEntry || currentEntry.status !== "running") {
-      return;
-    }
-
-    attemptCount++;
-    console.log(`[DeepPK Poll] jobId: ${jobId} attempt #${attemptCount}`);
-
-    if (Date.now() - currentEntry.createdAt > MAX_POLL_TIME_MS) {
-      currentEntry.status = "error";
-      currentEntry.error = "Prediction timed out after 10 minutes";
-      currentEntry.pollTimer = null;
-      console.log(`[DeepPK Poll] jobId: ${jobId} STOPPED — reason: timeout`);
-      console.log(`⏱️ Job ${jobId} timed out after 10 minutes`);
-      return;
-    }
-
-    try {
-      const form = new FormData();
-      form.append("job_id", jobId);
-
-      const response = await axios({
-        method: "GET",
-        url: `${BASE}/api/predict`,
-        data: `job_id=${encodeURIComponent(jobId)}`,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        timeout: 25000,
-        responseType: "text",
-      });
-
-      const raw = String(response.data);
-
-      let status = "running";
-      if (raw.includes('"status": "running"') || raw.includes('"status":"running"status":"running"')) {
-        status = "running";
-      } else if (raw.includes("ERROR while running") || raw.includes("ERROR")) {
-        status = "error";
-      } else {
-        status = "done";
-      }
-      console.log(`[DeepPK Poll] jobId: ${jobId} status: ${status}`);
-
-      if (status === "running") {
-        currentEntry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
-        return;
-      }
-
-      if (status === "error") {
-        currentEntry.status = "error";
-        currentEntry.error = "Could not process this molecule. Please check your SMILES string and try again.";
-        currentEntry.pollTimer = null;
-        console.log(`[DeepPK Poll] jobId: ${jobId} STOPPED — reason: error`);
-        console.log(`❌ Job ${jobId} returned error from DeepPK`);
-        return;
-      }
-
-      let parsed;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        currentEntry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
-        return;
-      }
-
-      if (typeof parsed === "string") {
-        try {
-          parsed = JSON.parse(parsed);
-        } catch {
-          currentEntry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
-          return;
-        }
-      }
-
-      const results = [];
-      if (parsed["0"]) {
-        let idx = 0;
-        while (parsed[String(idx)]) {
-          const mol = parsed[String(idx)];
-          const row = parseMolecule(mol);
-          if (row) results.push(row);
-          idx++;
-        }
-      } else if (parsed.SMILES) {
-        const row = parseMolecule(parsed);
-        if (row) results.push(row);
-      }
-
-      if (results.length === 0) {
-        currentEntry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
-        return;
-      }
-
-      currentEntry.status = "done";
-      currentEntry.results = results;
-      currentEntry.pollTimer = null;
-      console.log(`[DeepPK Poll] jobId: ${jobId} STOPPED — reason: done`);
-      console.log(`✅ Job ${jobId} completed, ${results.length} results`);
-
-    } catch (err) {
-      console.log(`[DeepPK Poll] jobId: ${jobId} status: network_error`);
-      console.error(`❌ Job ${jobId} poll error:`, err.response?.status, err.message);
-      currentEntry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
-    }
-  };
-
-  entry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
 }
 
 router.post("/predict", async (req, res) => {
@@ -162,34 +34,116 @@ router.post("/predict", async (req, res) => {
     form.append("smiles", smiles);
     form.append("pred_type", pred_type);
 
+    console.log("[DeepPK Submit] Submitting", smilesList.length, "SMILES to", BASE);
+
     const response = await axios.post(`${BASE}/api/predict`, form, {
       headers: form.getHeaders(),
       timeout: 20000,
     });
 
     const jobId = response.data.job_id;
-    console.log("[DeepPK Submit] SUCCESS job_id:", jobId, "smiles count:", smilesList.length);
-    if (!jobId) {
-      return res.status(500).json({ error: "No job_id returned from DeepPK" });
-    }
+    console.log("[DeepPK Submit] Got job_id:", jobId);
 
     jobStore.set(jobId, {
       status: "running",
       results: null,
       error: null,
       createdAt: Date.now(),
-      pollTimer: null,
     });
 
-    startBackgroundPolling(jobId);
     cleanupJobStore();
 
+    setTimeout(pollDeepPK, 10000, jobId, smiles);
+
     return res.json({ job_id: jobId });
+
   } catch (err) {
-    console.error("[DeepPK Submit] FAILED:", err.message, "status:", err.response?.status);
+    console.error("[DeepPK Submit] FAILED:", err.message);
     return res.status(500).json({ error: err.message });
   }
 });
+
+async function pollDeepPK(jobId, originalSmiles) {
+  const entry = jobStore.get(jobId);
+  if (!entry || entry.status !== "running") return;
+
+  try {
+    const response = await axios({
+      method: "GET",
+      url: `${BASE}/api/predict`,
+      data: `job_id=${encodeURIComponent(jobId)}`,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      timeout: 20000,
+      responseType: "text",
+    });
+
+    const raw = String(response.data);
+    console.log("[DeepPK Poll]", jobId, "— first 120 chars:", raw.slice(0, 120));
+
+    if (raw.includes('"status": "running"') || raw.includes('"status":"running"')) {
+      setTimeout(pollDeepPK, 10000, jobId, originalSmiles);
+      return;
+    }
+
+    if (raw.includes("ERROR while running") || raw.includes("ERROR")) {
+      jobStore.set(jobId, {
+        status: "error",
+        results: null,
+        error: "Could not process this molecule. Please check your SMILES string and try again.",
+        createdAt: entry.createdAt,
+      });
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      setTimeout(pollDeepPK, 10000, jobId, originalSmiles);
+      return;
+    }
+
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        setTimeout(pollDeepPK, 10000, jobId, originalSmiles);
+        return;
+      }
+    }
+
+    const results = [];
+    if (parsed["0"]) {
+      let idx = 0;
+      while (parsed[String(idx)]) {
+        const mol = parsed[String(idx)];
+        const row = parseMolecule(mol);
+        if (row) results.push(row);
+        idx++;
+      }
+    } else if (parsed.SMILES) {
+      const row = parseMolecule(parsed);
+      if (row) results.push(row);
+    }
+
+    if (results.length === 0) {
+      setTimeout(pollDeepPK, 10000, jobId, originalSmiles);
+      return;
+    }
+
+    console.log("[DeepPK Poll]", jobId, "— done,", results.length, "results");
+    jobStore.set(jobId, {
+      status: "done",
+      results: results,
+      error: null,
+      createdAt: entry.createdAt,
+    });
+
+  } catch (err) {
+    console.error("[DeepPK Poll]", jobId, "— error:", err.message);
+    setTimeout(pollDeepPK, 10000, jobId, originalSmiles);
+  }
+}
 
 function parseMolecule(mol) {
   if (!mol || !mol.SMILES) return null;
@@ -251,7 +205,7 @@ router.get("/results", async (req, res) => {
     return res.json({ status: "pending" });
 
   } catch (err) {
-    console.error("❌ ADMET results error:", err.message);
+    console.error("[DeepPK] Results error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 });
