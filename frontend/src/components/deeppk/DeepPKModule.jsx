@@ -686,6 +686,9 @@ export default function DeepPKModule() {
         if (pollData.status === "error") {
           throw new Error(pollData.message || "Prediction error");
         }
+        if (pollData.status === "not_found") {
+          throw new Error("Prediction job not found — the server may have restarted. Please try submitting again.");
+        }
         if (pollData.status === "done" && pollData.results) {
           jobResults = pollData.results;
           break;
@@ -703,7 +706,12 @@ export default function DeepPKModule() {
     }
 
     if (!jobResults) {
-      setError("Timed out waiting for prediction results.");
+      const elapsed = attempts * 3;
+      if (elapsed > 300) {
+        setError("DeepPK is taking longer than expected. Results will appear when ready — you can wait or try again later.");
+      } else {
+        setError("Timed out waiting for prediction results.");
+      }
       setRunning(false);
       return;
     }
