@@ -34,16 +34,22 @@ function startBackgroundPolling(jobId) {
   const entry = jobStore.get(jobId);
   if (!entry) return;
 
+  let attemptCount = 0;
+
   const pollDeepPK = async () => {
     const currentEntry = jobStore.get(jobId);
     if (!currentEntry || currentEntry.status !== "running") {
       return;
     }
 
+    attemptCount++;
+    console.log(`[DeepPK Poll] jobId: ${jobId} attempt #${attemptCount}`);
+
     if (Date.now() - currentEntry.createdAt > MAX_POLL_TIME_MS) {
       currentEntry.status = "error";
       currentEntry.error = "Prediction timed out after 10 minutes";
       currentEntry.pollTimer = null;
+      console.log(`[DeepPK Poll] jobId: ${jobId} STOPPED — reason: timeout`);
       console.log(`⏱️ Job ${jobId} timed out after 10 minutes`);
       return;
     }
@@ -63,15 +69,26 @@ function startBackgroundPolling(jobId) {
 
       const raw = String(response.data);
 
+      let status = "running";
       if (raw.includes('"status": "running"') || raw.includes('"status":"running"status":"running"')) {
+        status = "running";
+      } else if (raw.includes("ERROR while running") || raw.includes("ERROR")) {
+        status = "error";
+      } else {
+        status = "done";
+      }
+      console.log(`[DeepPK Poll] jobId: ${jobId} status: ${status}`);
+
+      if (status === "running") {
         currentEntry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
         return;
       }
 
-      if (raw.includes("ERROR while running") || raw.includes("ERROR")) {
+      if (status === "error") {
         currentEntry.status = "error";
         currentEntry.error = "Could not process this molecule. Please check your SMILES string and try again.";
         currentEntry.pollTimer = null;
+        console.log(`[DeepPK Poll] jobId: ${jobId} STOPPED — reason: error`);
         console.log(`❌ Job ${jobId} returned error from DeepPK`);
         return;
       }
@@ -115,9 +132,11 @@ function startBackgroundPolling(jobId) {
       currentEntry.status = "done";
       currentEntry.results = results;
       currentEntry.pollTimer = null;
+      console.log(`[DeepPK Poll] jobId: ${jobId} STOPPED — reason: done`);
       console.log(`✅ Job ${jobId} completed, ${results.length} results`);
 
     } catch (err) {
+      console.log(`[DeepPK Poll] jobId: ${jobId} status: network_error`);
       console.error(`❌ Job ${jobId} poll error:`, err.response?.status, err.message);
       currentEntry.pollTimer = setTimeout(pollDeepPK, POLL_INTERVAL_MS);
     }
@@ -148,8 +167,8 @@ router.post("/predict", async (req, res) => {
       timeout: 20000,
     });
 
-    console.log("✅ ADMET submitted:", response.data);
     const jobId = response.data.job_id;
+    console.log("[DeepPK Submit] SUCCESS job_id:", jobId, "smiles count:", smilesList.length);
     if (!jobId) {
       return res.status(500).json({ error: "No job_id returned from DeepPK" });
     }
@@ -167,7 +186,7 @@ router.post("/predict", async (req, res) => {
 
     return res.json({ job_id: jobId });
   } catch (err) {
-    console.error("❌ ADMET submit error:", err.message);
+    console.error("[DeepPK Submit] FAILED:", err.message, "status:", err.response?.status);
     return res.status(500).json({ error: err.message });
   }
 });
