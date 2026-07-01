@@ -751,7 +751,7 @@ export default function WorkspaceView() {
 
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginTop: "16px", borderTop: "1px solid rgba(2, 132, 199, 0.1)", paddingTop: "12px" }}>
                       <button 
-                        onClick={() => window.open(`http://localhost:5000/api/docking/download/${job.outFile}`)}
+                        onClick={() => window.open(`/api/docking/download/${job.outFile}`)}
                         className="glow-button"
                         style={{
                           flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",

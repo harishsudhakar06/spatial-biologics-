@@ -3,7 +3,7 @@ import { saveFile } from "../../utils/downloadHelper";
 import { Upload, Play, ChevronDown, FileText, Download, CheckCircle, AlertCircle, Loader2, FlaskConical, Target } from "lucide-react";
 import { useWorkspace } from "../../context/WorkspaceContext";
 
-const API = "http://localhost:5000/api/docking";
+const API = "/api/docking";
 
 export default function DockingModule() {
   const { addDockingJob, dockingJobs = [] } = useWorkspace();
